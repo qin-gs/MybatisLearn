@@ -34,17 +34,27 @@ ParamNameResolver
     2. 通过@Param中的name属性转换
     3. 基于反射转换成变量名，如果不支持(jdk7)转换成arg0, arg1
 
-ParameterHandler  
-  1. 单个原始类型 直接映射，忽略sql中的引用名称
-  2. Map类型 基于key映射
-  3. Object 基于属性名映射，支持嵌套对象属性访问(MetaObject)
+ParameterHandler
+
+1. 单个原始类型 直接映射，忽略sql中的引用名称
+2. Map类型 基于key映射
+3. Object 基于属性名映射，支持嵌套对象属性访问(MetaObject)
 
 ResultSetHandler(将结果集的行转换成对象)  
 ResultContext(存放当前行对象，以及解析状态和控制解析数量)  
-ResultHandler(处理存入解析结果)  
+ResultHandler(处理存入解析结果)
 
+mybatis映射体系(反射)  
+MetaObject
 
-
+1. 查找属性， 忽略大小写，支持驼峰，支持子属性
+2. 获取属性值
+    1. 基于点获取子属性 user.name
+    2. 基于索引获取列表值 users[1].name
+    3. 基于key获取map值 user[name]
+3. 设置属性
+    1. 可设置子属性值
+    2.
 
 
 

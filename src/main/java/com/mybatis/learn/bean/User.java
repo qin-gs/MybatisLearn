@@ -7,6 +7,7 @@ public class User {
     private String name;
     private int age;
     private String gender;
+    private String phoneNum;
 
     public String getId() {
         return id;
@@ -41,6 +42,14 @@ public class User {
         this.gender = gender;
     }
 
+    public String getPhoneNum() {
+        return phoneNum;
+    }
+
+    public void setPhoneNum(String phoneNum) {
+        this.phoneNum = phoneNum;
+    }
+
     @Override
     public String toString() {
         return "User{" +
@@ -48,6 +57,7 @@ public class User {
                 ", name='" + name + '\'' +
                 ", age=" + age +
                 ", gender='" + gender + '\'' +
+                ", phoneNum='" + phoneNum + '\'' +
                 '}';
     }
 }
