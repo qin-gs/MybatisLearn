@@ -1,6 +1,8 @@
 package com.mybatis.learn.bean;
 
 import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.reflection.property.PropertyTokenizer;
+import org.apache.ibatis.reflection.wrapper.BeanWrapper;
 import org.apache.ibatis.session.Configuration;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -51,5 +53,9 @@ public class MetaObjectTest {
         Configuration configuration = new Configuration();
         MetaObject metaObject = configuration.newMetaObject(blog);
         System.out.println(metaObject.getValue("comments[0].user.name"));
+
+        BeanWrapper wrapper = new BeanWrapper(metaObject, blog);
+        System.out.println(wrapper.get(new PropertyTokenizer("comments[0]")));
+        System.out.println(wrapper.get(new PropertyTokenizer("comments")));
     }
 }

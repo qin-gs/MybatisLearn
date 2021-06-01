@@ -69,6 +69,82 @@ mybatis映射体系(反射)
 **Reflector**  
 基于属性名获取set, get方法，属性类别，不支持子属性获取
 
+**手动结果集映射**
+ResultMap  
+ResultMapping
+
+1. constructor
+2. id
+3. result
+4. association(一对一)
+5. collection(一对多)
+    1. 复合映射
+       ```html
+       <resultMap id="blogMap" type="blog">
+         <id></id>
+         <result></result>
+         <association property="comments">
+           <id column="id" property="id"></id>
+           <result column="body" property="body"></result>
+         </association>
+       </resultMap>
+       ```
+    2. 嵌套查询
+       ```html
+       <resultMap id="blogMap" type="blog">
+         <id></id>
+         <result></result>
+         <association property="comments" select="selectCommentByBlogId">
+         </association>
+       </resultMap>
+       <select id="selectCommentByBlogId" />
+       ```
+    3. 外部映射
+       ```html
+       <resultMap id="blogMap" type="blog">
+         <id></id>
+         <result></result>
+         <association property="comments" resultMap="commentMap">
+         </association>
+       </resultMap>
+       <resultMap id="commentMap" type="comment">
+         <id column="id" property="id"></id>
+         <result column="body" property="body"></result>
+       </resultMap>
+       ```
+
+**自动映射**  
+列名 <----> 属性名
+
+1. 列名和属性名同事存在(忽略大小写)
+2. 当前列未手动设置映射
+3. 属性类别存在TypeHandler
+4. 开启autoMapping(默认开启)
+
+UmMappedColumnAutoMapping
+
+**嵌套子查询**
+
+```html
+
+<resultMap id="blogMap" type="blog">
+    <result column="title" property="title"></result>
+    <association property="author" column="authorId" select="selectUserByBlogId"></association>
+    <collection property="comments" select="selectCommentsByBlogId"></collection>
+</resultMap>
+<select id="selectUserByBlogId" resultType="user">
+    select * from users where id=#{userId}
+</select>
+<select id="selectCommentsByBlogId" resultType="comment">
+    select * from comment where blogId=#{blogId}
+
+</select>
+```
+
+
+
+
+
 
 
 
