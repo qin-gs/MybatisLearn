@@ -8,9 +8,8 @@ spring:
     show-sql: true
 
 mybatis:
-  mapperLocation: classpath:xml/*.xml
-  config-location: classpath:mybatis-config.xml
-  typeAliasesPackage: com.mybatis.learn.bean
+  mapper-locations: classpath:xml/*.xml
+  type-aliases-package: com.mybatis.learn.bean
 
 
 

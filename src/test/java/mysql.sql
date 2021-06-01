@@ -1,24 +1,32 @@
-INSERT INTO mybatis_learn.blog (id, title, body, userid)
-VALUES ('blog-1', '博客1', '博客1 内容', null);
 
-INSERT INTO mybatis_learn.blog (id, title, body, userid)
-VALUES ('blog-2', '博客2', '博客2 内容', null);
+-- auto-generated definition
+create table blog
+(
+    id     varchar(32)   not null
+        primary key,
+    title  varchar(128)  null,
+    body   varchar(1024) null,
+    userid varchar(32)   null
+)
+    charset = utf8mb4;
 
-INSERT INTO mybatis_learn.blog (id, title, body, userid)
-VALUES ('blog-3', '博客3', '博客3 内容', null);
-
-INSERT INTO mybatis_learn.blog (id, title, body, userid)
-VALUES ('blog-4', '博客4', '博客4 内容', null);
-
-INSERT INTO mybatis_learn.blog (id, title, body, userid)
-VALUES ('blog-5', '博客5', '博客5 内容', null);
-
-show create table mybatis_learn.blog;
-
-
-alter table mybatis_learn.blog
-    convert to character set utf8mb4;
-alter table mybatis_learn.comment
-    convert to character set utf8mb4;
-alter table mybatis_learn.user
-    convert to character set utf8mb4;
+-- auto-generated definition
+create table comment
+(
+    id      varchar(32)  not null
+        primary key,
+    content varchar(512) null,
+    user_id varchar(32)  null
+)
+    charset = utf8mb4;
+-- auto-generated definition
+create table user
+(
+    id        varchar(32) not null
+        primary key,
+    name      varchar(64) null,
+    age       int         null,
+    gender    varchar(2)  null,
+    phone_num varchar(11) null
+)
+    charset = utf8mb4;
