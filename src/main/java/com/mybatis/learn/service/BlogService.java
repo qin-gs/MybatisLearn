@@ -5,6 +5,7 @@ import com.mybatis.learn.mapper.BlogMapper;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 @Service
 public class BlogService {
@@ -12,7 +13,7 @@ public class BlogService {
     @Resource
     private BlogMapper blogMapper;
 
-    public Blog getBlogById(String id) {
+    public List<Blog> getBlogById(String id) {
         return blogMapper.getBlogById(id);
     }
 

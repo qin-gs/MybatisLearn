@@ -1,15 +1,63 @@
-SqlSession(门面):
+### mybatis执行器
+
+**SqlSession**(门面):
 
 1. 基本api 增删查改
 2. 辅助api 提交关闭会话
 
-Executor：
+**Executor**：
+
+sqlSession 和 Executor 是一对一的关系
 
 1. 基本功能： 改 查 维护缓存 事务管理
 2. 辅助api: 提交关闭执行器，批处理刷新  
    ![executor继承关系](./image/executor-hierarchy.jpg)
 
-StatementHandler:
+BaseExecutor (公共操作 一级缓存 获取连接 query update)  
+CachingExecutor (二级缓存 装饰器delegate)  
+SimpleExecutor 简单执行器 (实现doQuery, doUpdate)  
+ReuseExecutor 可重用执行器  
+BatchExecutor 批处理执行器 只针对修改操作，需要手动刷新
+
+装饰器模式(在不改变原有类结构和继承的情况下，通过包装原对象去扩展一个新功能)
+
+**一级缓存命中场景**  
+作用域为session  
+一级缓存：BaseExecutor  
+二级缓存：CachingExecutor
+
+命中场景:  
+运行时参数相关:
+
+1. sql 和 参数相同
+2. 相同的StatementId (com.mybatis.learn.mapper.BlogMapper.getBlogById)
+3. sqlSession必须相同
+4. RowBounds 返回行范围必须相同
+
+操作和配置相关
+
+1. 没有手动清空 提交 回滚 sqlSession.clearCache();
+2. 未调用flushCache=true的查询
+3. 未执行Update(数据一致性问题)
+4. 缓存作用于不是Statement(Configuration里面的localCacheScope (Session, Statement(作用于嵌套查询，子查询)))
+
+Mapper ->  SqlSession ->  BaseExecutor ->  StatementHandler
+
+| 动态代理接口 | 会话模板 | 会话拦截器 | 会话工厂 |  
+| --- | --- | ---- | --- |
+|Mapper | SqlSessionTemplate | SqlSessionInterceptor | SqlSessionFactory |
+
+**二级缓存**
+应用级缓存
+
+1. 存储位置
+2. 溢出淘汰
+3. 过期清理
+4. 线程安全
+5. 命中率统计
+6. 序列化
+
+**StatementHandler**:
 
 1. 生命JdbcStatement 填充参数
 2. sql执行  
@@ -141,6 +189,26 @@ UmMappedColumnAutoMapping
 </select>
 ```
 
+**循环依赖流程**  
+填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载 DefaultResultSetHandler)  
+获取嵌套查询值 getNestedQueryMappingValue  
+执行准备
+
+1. 准备参数
+2. 获取MappedStatement
+3. 获取动态sql
+4. 创建缓存key
+
+是否命中一级缓存 ->  延迟装载 deferLoad  
+是否懒加载 ->  懒加载  
+实时加载
+
+**懒加载**  
+代理
+
+| 装载器 | 执行器 | 数据库 |
+| --- | --- | --- |
+| ResultLoader | Executor | 数据库 |
 
 
 
