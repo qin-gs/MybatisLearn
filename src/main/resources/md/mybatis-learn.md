@@ -49,13 +49,26 @@ Mapper ->  SqlSession ->  BaseExecutor ->  StatementHandler
 
 **二级缓存**
 应用级缓存
-
+****
 1. 存储位置
-2. 溢出淘汰
+2. 溢出淘汰(LRU)
 3. 过期清理
 4. 线程安全
 5. 命中率统计
 6. 序列化
+
+命中场景  
+1. 会话提交后  
+2. sql语句，参数相同
+3. 相同的Statement
+4. RowBounds相同
+
+org.apache.ibatis.cache.Cache.java  
+装饰器 + 责任链
+
+| SynchronizedCache | LRUCache | LoggingCache | ScheduledCache | BlockingCache | PerpetualCache |  
+| --- | --- | --- | --- | --- | --- |  
+| 线程同步 | 记录命中率 | 防溢出 | 过期清理 | 防穿透 | 内存存储 |
 
 **StatementHandler**:
 
@@ -185,7 +198,6 @@ UmMappedColumnAutoMapping
 </select>
 <select id="selectCommentsByBlogId" resultType="comment">
     select * from comment where blogId=#{blogId}
-
 </select>
 ```
 
@@ -210,8 +222,8 @@ UmMappedColumnAutoMapping
 | --- | --- | --- |
 | ResultLoader | Executor | 数据库 |
 
-
-
+填充属性 获取嵌套查询值
+**循环依赖流程解析**  
 
 
 

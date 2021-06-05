@@ -7,9 +7,13 @@ spring:
   jpa:
     show-sql: true
 
-mybatis:
-  mapper-locations: classpath:xml/*.xml
-  type-aliases-package: com.mybatis.learn.bean
+#mybatis:
+#  mapper-locations: classpath:xml/*.xml
+#  type-aliases-package: com.mybatis.learn.bean
+logging:
+  config: classpath:log4j.properties
+  level:
+    com.mybatis.learn.mapper: debug
 
 
 

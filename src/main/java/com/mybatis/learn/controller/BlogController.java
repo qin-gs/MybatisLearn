@@ -16,7 +16,7 @@ public class BlogController {
     private BlogService service;
 
     @GetMapping("getBlog/{id}")
-    public List<Blog> getBlogById(@PathVariable String id) {
+    public Blog getBlogById(@PathVariable String id) {
         return service.getBlogById(id);
     }
 }

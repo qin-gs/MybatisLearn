@@ -13,7 +13,7 @@ public class BlogService {
     @Resource
     private BlogMapper blogMapper;
 
-    public List<Blog> getBlogById(String id) {
+    public Blog getBlogById(String id) {
         return blogMapper.getBlogById(id);
     }
 
