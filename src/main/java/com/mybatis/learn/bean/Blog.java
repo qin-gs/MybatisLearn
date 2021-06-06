@@ -1,8 +1,9 @@
 package com.mybatis.learn.bean;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class Blog {
+public class Blog implements Serializable {
     private String id;
     private String title;
     private User author;

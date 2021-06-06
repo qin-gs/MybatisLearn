@@ -1,7 +1,9 @@
 package com.mybatis.learn.bean;
 
 
-public class User {
+import java.io.Serializable;
+
+public class User implements Serializable {
 
     private String id;
     private String name;
@@ -16,7 +18,6 @@ public class User {
     public void setId(String id) {
         this.id = id;
     }
-
 
     public String getName() {
         return name;

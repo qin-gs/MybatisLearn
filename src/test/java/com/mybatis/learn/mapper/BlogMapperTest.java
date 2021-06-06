@@ -7,8 +7,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.Resource;
 
-import static org.junit.Assert.*;
-
 @SpringBootTest
 @RunWith(SpringRunner.class)
 public class BlogMapperTest {
@@ -19,5 +17,10 @@ public class BlogMapperTest {
     @Test
     public void selectUserByBlogId() {
         System.out.println(mapper.selectUserByBlogId("blog-1"));
+    }
+
+    @Test
+    public void getBlogById() {
+        System.out.println(mapper.getBlogById("blog-1"));
     }
 }

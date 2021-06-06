@@ -3,19 +3,35 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.mybatis.learn.mapper.BlogMapper">
-    <select id="getBlogById" resultType="com.mybatis.learn.bean.Blog">
+
+    <resultMap id="blogMap" type="blog" autoMapping="true">
+        <id column="id" property="id"/>
+        <association property="author" column="id" select="selectUserByBlogId"/>
+        <collection property="comments" column="id" javaType="ArrayList" ofType="comment"
+                    select="selectCommentByBlogId" autoMapping="true"/>
+    </resultMap>
+
+    <select id="getBlogById" resultMap="blogMap">
         select *
         from blog
         where id = #{id}
     </select>
 
-    <resultMap id="blogMap" type="blog" autoMapping="false">
-        <result column="title" property="title"/>
-        <association property="author" column="author_id" select="selectUserByBlogId"/>
-    </resultMap>
     <select id="selectUserByBlogId" resultType="user">
         select *
         from user
-        where id = #{userId};
+        where blogid = #{blogid};
+    </select>
+
+    <select id="selectCommentByBlogId" resultType="comment">
+        select *
+        from comment
+        where blogid = #{blogid}
+    </select>
+
+    <select id="selectUserById" resultType="user">
+        select *
+        from user
+        where id = #{id}
     </select>
 </mapper>

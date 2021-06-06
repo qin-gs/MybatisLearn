@@ -1,10 +1,13 @@
 package com.mybatis.learn.bean;
 
-public class Comment {
+import java.io.Serializable;
+
+public class Comment implements Serializable {
     private String id;
     private String blogId;
     private String body;
     private User user;
+    private String content;
 
     public String getId() {
         return id;
@@ -38,6 +41,14 @@ public class Comment {
         this.user = user;
     }
 
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
     @Override
     public String toString() {
         return "Comment{" +
@@ -45,6 +56,7 @@ public class Comment {
                 ", blogId='" + blogId + '\'' +
                 ", body='" + body + '\'' +
                 ", user=" + user +
+                ", content='" + content + '\'' +
                 '}';
     }
 }

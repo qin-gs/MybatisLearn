@@ -50,6 +50,7 @@ Mapper ->  SqlSession ->  BaseExecutor ->  StatementHandler
 **二级缓存**
 应用级缓存
 ****
+
 1. 存储位置
 2. 溢出淘汰(LRU)
 3. 过期清理
@@ -57,11 +58,29 @@ Mapper ->  SqlSession ->  BaseExecutor ->  StatementHandler
 5. 命中率统计
 6. 序列化
 
-命中场景  
-1. 会话提交后  
+命中场景
+
+1. 会话提交后
 2. sql语句，参数相同
 3. 相同的Statement
 4. RowBounds相同
+
+配置
+
+| 参数 | 作用  |
+| --- | --- |
+| cacheEnable| 全局缓存开关，默认为true |
+| useCache | 当前statement缓存开关，默认为true|
+| flushCache | 清除当前缓存空间： 修改true，查询false|
+| <cache> @CacheNameSpace| 声明缓存空间 |
+| <cache-ref> @CacheNameSpaceRef | 引用缓存空间(xml+注解) |
+
+提交之后才能命中缓存  
+会话直接是互相隔离的，缓存导致数据可见，不提交就放入缓存可能会导致脏读
+
+Session 每个会话(SqlSession)都有一个事务缓存管理器(TransactionCacheManager) 用来管理 多个暂存区(TransactionCache)  都指向同一个缓存区(
+SynchronizedCache)  
+commit之后才会将暂存区的数据移入缓存区
 
 org.apache.ibatis.cache.Cache.java  
 装饰器 + 责任链
@@ -69,6 +88,14 @@ org.apache.ibatis.cache.Cache.java
 | SynchronizedCache | LRUCache | LoggingCache | ScheduledCache | BlockingCache | PerpetualCache |  
 | --- | --- | --- | --- | --- | --- |  
 | 线程同步 | 记录命中率 | 防溢出 | 过期清理 | 防穿透 | 内存存储 |
+
+先取二级缓存(CacheExecutor)数据，然后查一级缓存(BaseExecutor)  
+![二级缓存执行流程](./image/二级缓存执行流程.png)
+
+clearOnCommit 同一个会话中 查 改 查  
+第二次改将clearOnCommit=true，由于没有提交，只是清空了暂存区  
+第三次查能查到但是返回null  
+commit之后将暂存区同步到缓存区
 
 **StatementHandler**:
 
@@ -201,19 +228,19 @@ UmMappedColumnAutoMapping
 </select>
 ```
 
-**循环依赖流程**  
-填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载 DefaultResultSetHandler)  
-获取嵌套查询值 getNestedQueryMappingValue  
-执行准备
+**循环依赖流程**
 
-1. 准备参数
-2. 获取MappedStatement
-3. 获取动态sql
-4. 创建缓存key
+1. 填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载 DefaultResultSetHandler)
+2. 获取嵌套查询值 getNestedQueryMappingValue
+3. 执行准备
+    1. 准备参数
+    2. 获取MappedStatement
+    3. 获取动态sql
+    4. 创建缓存key
 
-是否命中一级缓存 ->  延迟装载 deferLoad  
-是否懒加载 ->  懒加载  
-实时加载
+4. 是否命中一级缓存 ->  延迟装载 deferLoad
+5. 是否懒加载 ->  懒加载
+6. 实时加载
 
 **懒加载**  
 代理

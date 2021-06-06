@@ -14,8 +14,9 @@ import java.util.List;
 public interface BlogMapper {
 
 	// @Select("select * from blog where id=#{id}")
-	// @Options(flushCache = Options.FlushCachePolicy.TRUE)
 	Blog getBlogById(String id);
+
+	User selectUserById(String id);
 
 	User selectUserByBlogId(String id);
 }

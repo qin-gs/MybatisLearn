@@ -40,6 +40,13 @@ public class SecondCacheTest {
 		cache.getObject("key");
 	}
 
+	/**
+	 * 二级缓存命中条件
+	 * 1. 必须提交(autoCommit=true不行，必须commit或close)
+	 * 2. sql相同，参数相同
+	 * 3. 相同的statementId
+	 * 4. RoundBounds相同
+	 */
 	@Test
 	public void cache2Test() {
 		SqlSession session1 = factory.openSession();
@@ -47,9 +54,13 @@ public class SecondCacheTest {
 		Blog blog1 = mapper1.getBlogById("blog-1");
 		System.out.println(blog1);
 
+		session1.commit();
+
 		SqlSession session2 = factory.openSession();
 		BlogMapper mapper2 = session2.getMapper(BlogMapper.class);
 		Blog blog2 = mapper2.getBlogById("blog-1");
 		System.out.println(blog2);
+
+		System.out.println(blog1.equals(blog2));
 	}
 }
