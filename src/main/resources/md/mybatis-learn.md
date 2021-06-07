@@ -231,23 +231,28 @@ UmMappedColumnAutoMapping
 **循环依赖流程**
 
 1. 填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载 DefaultResultSetHandler)
-2. 获取嵌套查询值 getNestedQueryMappingValue
+2. 获取嵌套查询值 **getNestedQueryMappingValue**
 3. 执行准备
     1. 准备参数
     2. 获取MappedStatement
     3. 获取动态sql
     4. 创建缓存key
 
-4. 是否命中一级缓存 ->  延迟装载 deferLoad
-5. 是否懒加载 ->  懒加载
+4. 是否命中一级缓存 ->  延迟装载(解决循环依赖 queryStack) deferLoad
+5. 是否懒加载 ->  懒加载(动态代理)
 6. 实时加载
 
 **懒加载**  
-代理
+动态代理(一次操作)
 
 | 装载器 | 执行器 | 数据库 |
 | --- | --- | --- |
-| ResultLoader | Executor | 数据库 |
+| ResultLoader | Executor一次操作 | 数据库 |
+
+调用set方法，懒加载会被移除  
+序列化之后依然可进行
+
+sqlSession 多次操作  
 
 填充属性 获取嵌套查询值
 **循环依赖流程解析**  

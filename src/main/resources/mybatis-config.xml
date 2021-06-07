@@ -11,7 +11,8 @@
         <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
         <property name="url" value="jdbc:mysql://localhost:3306/mybatis_learn"/>
         <property name="org.apache.ibatis.parsing.PropertyParser.enable-default-value" value="true"/> <!-- 启用默认值特性 -->
-        <property name="org.apache.ibatis.parsing.PropertyParser.default-value-separator" value="?:"/> <!-- 修改默认值的分隔符 -->
+        <property name="org.apache.ibatis.parsing.PropertyParser.default-value-separator"
+                  value="?:"/> <!-- 修改默认值的分隔符 -->
     </properties>
 
     <!--配置全局属性-->
@@ -22,6 +23,7 @@
         <setting name="useColumnLabel" value="true"/>
         <!--开启驼峰式命名转换：Table{create_time} -> Entity{createTime}-->
         <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <!--        <setting name="configurationFactory" value=""/>-->
     </settings>
 
     <typeAliases>
