@@ -52,7 +52,38 @@ DefaultReflectorFactory
         1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在NM 里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()
            ”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
 
-TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型  
+TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型
+
+3. **ObjectFactory**  
+   通过多个重载的create方法创建对象  
+   DefaultObjectFactory是唯一实现  
+   instantiateClass根据传入的参数列表选择合适的构造函数实例化对象
+
+4. **Property**工具类
+    1. PropertyTokenizer Iterable 对传入的表达式进行解析 (orders[0].items[0].name)
+    2. PropertyNamer 完成方法名到属性名的转换
+    3. PropertyCopier 完成相同类型的两个对象之间的属性值拷贝
+
+5. **MetaClass**  
+   完成对复杂属性表达式的解析，并获取指定属性描述信息  
+   类级别的元信息封装和处理
+
+6. **ObjectWrapper**
+   对象级别的元信息处理：抽象了对象的属性信息，定义一系列查询和更新对象属性信息的方法  
+   ObjectWrapperFactory(实现类DefaultObjectWrapperFactory不可用)负责创建ObjectWrapper  
+   ![ObjectWrapper继承关系.png](./image/ObjectWrapper继承关系.png)
+
+7. **MetaObject**
+   完成属性表达式的解析过程
+
+2.3 **TypeHandler**类型转换  
+完成Java类型 和 JDBC类型的互相转换  
+enum JdbcType代表JDBC中的数据类型，HashMap<TYPE_CODE, JdbcType>维护常量编码和JdbcType的关系  
+所有的类型转换器全部继承TypeHandler
+
+1. setParameter 通过PreparedStatement为sql语句绑定参数时，将数据从JdbcType类型转换成Java类型
+2. getResult 从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型  
+
 
 
 
