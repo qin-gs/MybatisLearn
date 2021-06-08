@@ -252,12 +252,18 @@ UmMappedColumnAutoMapping
 调用set方法，懒加载会被移除  
 序列化之后依然可进行
 
-sqlSession 多次操作  
+sqlSession 多次操作
 
 填充属性 获取嵌套查询值
-**循环依赖流程解析**  
+**循环依赖流程解析**
 
+懒加载实现  
+Bean$proxy ->  ResultLoader ->  Executor ->  数据库
 
+MethodHandler 处理方法代理逻辑  
+ResultLoaderMap 存储待加载的属性，属性加载后被移除  
+LoadPair 准备加载环境，在反序列化并触发加载是，需要重写构建Configuration以及ResultLoader加载器与相关参数  
+ResultLoader 装载器，执行查询并获取结果，跨线程或原执行器关闭，将会构造一个新的执行器  
 
 
 

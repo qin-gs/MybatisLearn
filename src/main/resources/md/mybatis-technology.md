@@ -82,8 +82,9 @@ enum JdbcType代表JDBC中的数据类型，HashMap<TYPE_CODE, JdbcType>维护�
 所有的类型转换器全部继承TypeHandler
 
 1. setParameter 通过PreparedStatement为sql语句绑定参数时，将数据从JdbcType类型转换成Java类型
-2. getResult 从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型  
+2. getResult 从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型
 
-
+TypeHandlerRegistry 管理众多的TypeHandler  
+mybaits初始化时，会为所有已知的TypeHandler创建对象，注册在其中  
 
 
