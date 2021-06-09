@@ -107,7 +107,8 @@ LogFactory 创建对应的日志组件适配器
 代理模式 与 JDK动态代理    
 代理模式可以控制对真正对象的访问，或在执行业务处理的前后进行相关的预处理和后置处理，还可以用于实现延迟加载(当系统真正使用数据时，再调用 代理对象完成数据库的查询并返回数据)功能  
 静态代理：编译阶段就要创建代理类  
-JDK动态代理：InvocationHandler接口
+JDK动态代理：InvocationHandler接口，动态创建代理类并通过类加载器加载，然后在创建代理对象时将InvokeHandler对象作为构造参数传入，当调用代理对象时 ，会调用InvokerHandler.invoke()
+方法，并最终调用真正的业务对象的相应方法。
 
 ```text
 Proxy.newProxyInstance(ClassLoader loader, Class<?> interfaces, InvocationHandler h)
@@ -125,9 +126,17 @@ h 实现InvocationHandler的对象
  3. 创建代理对象
 ```
 
+JDBC调试  
+com.apache.ibatis.logging.jdbc包通过动态代理的方式将JDBC操作通过指定的日志框架打印出来  
+![BaseJdbcLogger继承关系](./image/BaseJdbcLogger继承关系.png)
+BaseJdbcLogger ConnectionLogger 封装Connection对象同时为其封装的Connection对象创建相应的代理对象  
+PreparedStatementLogger 封PreparedStatement对象，并为其创建相应的代理对象  
+StatementLogger  
+ResultLogger 封装ResultSet对象并为其创建代理对象 (展示查询结果)
 
-
-
-
-
+2.5 资源加载  
+org.apache.ibatis.io包封装ClassLoader以及读取资源文件的API  
+ClassLoaderWrapper是ClassLoader包装器  
+Resources 通过类加载器读取资源文件  
+ResolverUtil 根据指定条件查找指定包下的类
 
