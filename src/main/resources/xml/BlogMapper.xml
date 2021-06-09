@@ -6,16 +6,18 @@
 
     <resultMap id="blogMap" type="blog" autoMapping="true">
         <id column="id" property="id"/>
+        <result column="time" property="time" javaType="java.util.Date" jdbcType="VARCHAR"
+                typeHandler="com.mybatis.learn.handler.DateStringTypeHandler"/>
         <association property="author" column="id" select="selectUserByBlogId"/>
         <collection property="comments" column="id" javaType="ArrayList" ofType="comment"
                     select="selectCommentByBlogId" autoMapping="true"/>
     </resultMap>
 
-    <select id="getBlogById" resultMap="blogMap">
-        select *
-        from blog
-        where id = #{id}
-    </select>
+<!--    <select id="getBlogById" resultMap="blogMap">-->
+<!--        select *-->
+<!--        from blog-->
+<!--        where id = #{id}-->
+<!--    </select>-->
 
     <select id="selectUserByBlogId" resultType="user">
         select *

@@ -24,6 +24,7 @@
         <!--开启驼峰式命名转换：Table{create_time} -> Entity{createTime}-->
         <setting name="mapUnderscoreToCamelCase" value="true"/>
         <!--        <setting name="configurationFactory" value=""/>-->
+        <setting name="logImpl" value="LOG4J"/>
     </settings>
 
     <typeAliases>
@@ -32,6 +33,10 @@
         <typeAlias alias="comment" type="com.mybatis.learn.bean.Comment"/>
         <package name="com.mybatis.learn.bean"/>
     </typeAliases>
+    <typeHandlers>
+        <typeHandler handler="com.mybatis.learn.handler.DateStringTypeHandler"/>
+        <package name="com.mybatis.learn.handler"/>
+    </typeHandlers>
 
     <environments default="development">
         <environment id="development">

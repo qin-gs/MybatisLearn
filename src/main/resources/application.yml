@@ -15,6 +15,7 @@ mybatis:
   type-aliases-package: com.mybatis.learn.bean
   configuration:
     map-underscore-to-camel-case: true
+  type-handlers-package: com.mybatis.learn.handler
 
 logging:
   config: classpath:log4j.properties

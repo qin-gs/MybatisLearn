@@ -85,6 +85,49 @@ enum JdbcType代表JDBC中的数据类型，HashMap<TYPE_CODE, JdbcType>维护�
 2. getResult 从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型
 
 TypeHandlerRegistry 管理众多的TypeHandler  
-mybaits初始化时，会为所有已知的TypeHandler创建对象，注册在其中  
+mybaits初始化时，会为所有已知的TypeHandler创建对象，注册在其中
+
+TypeAliasRegistry 完成别名注册和管理功能(管理别名和java类型之间的关系)
+
+2.4 日志模块  
+设计模式六大原则：
+
+1. 单一职责原则
+2. 里氏替换原则
+3. 依赖倒置原则
+4. 接口隔离原则
+5. 迪米塔法则
+6. **开放封闭原则**  程序要对扩展开放，对修改关闭
+
+适配器模式  
+需要适配的类(真正的业务逻辑) <--> 适配器 <--> 目标接口(调用者使用)  
+com.apache.ibatis.logging.Log 定义日志模块的功能  
+LogFactory 创建对应的日志组件适配器
+
+代理模式 与 JDK动态代理    
+代理模式可以控制对真正对象的访问，或在执行业务处理的前后进行相关的预处理和后置处理，还可以用于实现延迟加载(当系统真正使用数据时，再调用 代理对象完成数据库的查询并返回数据)功能  
+静态代理：编译阶段就要创建代理类  
+JDK动态代理：InvocationHandler接口
+
+```text
+Proxy.newProxyInstance(ClassLoader loader, Class<?> interfaces, InvocationHandler h)
+loader 加载动态生成的代理类的类加载器
+interfaces 业务类实现的接口
+h 实现InvocationHandler的对象
+
+业务逻辑(java.lang.reflect.Proxy类中):
+ 1. 获取代理类的Class getProxyClass0(loader, interfaces)
+   1. 限制接口数量 < 65536
+   2. 如果指定的类加载器中已经创建了实现指定接口的代理类，就从缓存(WeakCache<ClassLoader, Class<?>[], Class<?>> proxyClassCache)中查找；否则通过ProxyClassFactory创建实现指定接口的代理类
+   3. WeakCache.get先从缓存中查找代理类，如果找不到创建Factory(WeakCache的内部类)对象调用get方法获取代理类，Factory.get会调用ProxyClassFactory.apply(Proxy类中，是一个BiFunction<T, U, R>(提供两个参数，返回一个结果))创建并加载代理类
+   4. apply方法先检测代理类需要实现的接口集合，确定代理类的名称，创建代理类并写入文件，最后加载代理类返回对应的Class对象用于后续实例化代理类对象
+ 2. 获取代理类的构造方法
+ 3. 创建代理对象
+```
+
+
+
+
+
 
 
