@@ -164,7 +164,7 @@ UnpooledDataSource, PooledDataSource 两个产品类
 
 2.7 Transaction  
 org.apache.ibatis.transaction.Transaction 接口  
-![Transaction继承关系.png](./image/Transaction继承关系.png)
+![Transaction继承关系.png](./image/Transaction继承关系.png)  
 JdbcTransaction JdbcTransactionFactory 依赖Jdbc Connection控制事务的提交和回滚  
 ManagedTransaction ManagedTransactionFactory 依赖容器控制事务的提交回滚  
 TransactionFactory 在指定连接上创建事务对象 或 从指定数据源中获取数据库连接，在连接上创建事务对象
@@ -183,7 +183,7 @@ MapperProxy
 MapperMethod  
 封装Mapper接口中对应方法的信息，以及对应的sql语句信息。可以在多个代理对象之间共享  
 一个连接Mapper接口和映射配置文件中定义的sql语句的桥梁  
-execute根据sql语句类型完成数据库操作  
+execute根据sql语句类型完成数据库操作并处理返回值  
 
 SqlCommand
 
@@ -204,8 +204,9 @@ aMethod(int a, RowBounds rb, int b) -> {{0, "0"}, {2, "1"}}
 MethodSignature  
 封装Mapper接口中定义的方法的相关信息  
 
-
-
+2.9 缓存
+org.apache.ibatis.cache.Cache接口  
+装饰器模式: 动态的为对象添加功能，基于组合的方式实现
 
 
 
