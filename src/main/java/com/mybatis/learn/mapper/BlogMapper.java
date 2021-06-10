@@ -22,9 +22,9 @@ public interface BlogMapper {
 	})
 	@ConstructorArgs({@Arg(column = "title", javaType = String.class)})
 	@Options(keyColumn = "id")
-	Blog getBlogById(String id);
+	Blog getBlogById(@Param("id") String id);
 
-	User selectUserById(String id);
+	User selectUserById(@Param("id") String id);
 
 	User selectUserByBlogId(String id);
 

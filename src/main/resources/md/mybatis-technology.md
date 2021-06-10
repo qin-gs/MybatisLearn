@@ -138,5 +138,83 @@ ResultLogger 封装ResultSet对象并为其创建代理对象 (展示查询结�
 org.apache.ibatis.io包封装ClassLoader以及读取资源文件的API  
 ClassLoaderWrapper是ClassLoader包装器  
 Resources 通过类加载器读取资源文件  
-ResolverUtil 根据指定条件查找指定包下的类
+ResolverUtil 根据指定条件查找指定包下的类  
+VFS 虚拟文件系统 查找指定路径下的资源
+
+2.6 DataSource  
+实现javax.sql.DataSource接口  
+PooledDataSource 和 UnpooledDataSource 使用工厂创建  
+工厂方法模式：添加新产品时，只需要添加对应的工厂实现类，而不必修改已有的代码。符合开放封闭原则。同时工厂方法先调用者隐藏具体产品的实例化细节 调用者只需要了解工厂接口和产品接口，面向接口编程。  
+但是新增新产品实现类时，还要提供一个与之对应的工厂实现类，新增的类是成对实现的。
+
+org.apache.ibatis.datasource.DataSourceFactory 工厂接口  
+UnpooledDataSourceFactory, PooledDataSourceFactory 两个工厂接口实现类  
+![DataSourceFactory继承关系.png](./image/DataSourceFactory继承关系.png)  
+javax.sql.DataSource 产品接口  
+UnpooledDataSource, PooledDataSource 两个产品类
+
+1. UnpooledDataSource 每次getConnection都会获取一个新的连接
+2. PooledDataSource  
+   使用PooledConnection封装代理(Jdk动态代理，对close方法进行代理)真正的Connection对象(真正的Connection对象是由封装的UnpooledDataSource创建的)    
+   PolledDataSource封装数据库连接池的统计信息  
+   使用PoolState管理PooledConnection对象的状态，分别用List存储 空闲和活跃状态的连接，并存储一些关于连接池的统计字段  
+   使用线程池 调用代理对象的close方法时，并未真正关闭数据库连接，而是将PooledConnection对象归还给数据库，供之后重用  
+   PooledDataSource.getConnection的时候会获取PooledConnection对象，然后getProxyConnection获取数据库连接的代理对象  
+   修改数据库配置的时候，会清空所有的连接
+
+2.7 Transaction  
+org.apache.ibatis.transaction.Transaction 接口  
+![Transaction继承关系.png](./image/Transaction继承关系.png)
+JdbcTransaction JdbcTransactionFactory 依赖Jdbc Connection控制事务的提交和回滚  
+ManagedTransaction ManagedTransactionFactory 依赖容器控制事务的提交回滚  
+TransactionFactory 在指定连接上创建事务对象 或 从指定数据源中获取数据库连接，在连接上创建事务对象
+
+2.8 Binding模块
+
+MapperRegistry MapperProxyFactory    
+MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactoryzhi就的关系  
+在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，
+key时Mapper接口对应的Class对象，value是MapperProxyFactory工厂对象，为Mapper接口创建代理对象  
+MapperProxyFactory负责创建代理对象
+
+MapperProxy  
+实现类InvocationHandler接口，为接口(@Mapper)创建代理对象
+
+MapperMethod  
+封装Mapper接口中对应方法的信息，以及对应的sql语句信息。可以在多个代理对象之间共享  
+一个连接Mapper接口和映射配置文件中定义的sql语句的桥梁  
+execute根据sql语句类型完成数据库操作  
+
+SqlCommand
+
+1. name记录sql语句的名称
+2. type记录sql语句类型(unknown, select, insert, update, delete, flush)
+
+ParamNameResolver  
+处理Mapper接口中定义的方法的参数列表  
+SortedMap<Integer, String> names 记录参数列表中的**位置索引**和**参数名称/参数索引**之间的对应关系(第key个位置是第value个参数)  
+RowBounds 和 ResultHandler不会被记录
+
+```text
+aMethod(@Param("M") int a, @Param("N") int b) -> {{0, "M"}, {1, "N"}}
+aMethod(int a, int b) -> {{0, "0"}, {1, "1"}}
+aMethod(int a, RowBounds rb, int b) -> {{0, "0"}, {2, "1"}}
+```
+
+MethodSignature  
+封装Mapper接口中定义的方法的相关信息  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
