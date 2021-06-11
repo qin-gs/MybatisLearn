@@ -4,6 +4,29 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.mybatis.learn.mapper.BlogMapper">
 
+    <sql id="columns">
+        ${alias}.id, ${alias}.name
+    </sql>
+    <select id="testColumn" resultType="map">
+        select
+            <include refid="columns"><property name="alias" value="v1"/></include>
+            <include refid="columns"><property name="alias" value="v2"/></include>
+        from blog
+    </select>
+
+    <sql id="someTable"> ${prefix}Table </sql>
+    <sql id="someInclude">
+        from
+        <include refid="${include_target}"/>
+    </sql>
+    <select id="testSql" resultType="map">
+        select *
+        <include refid="someInclude">
+            <property name="prefix" value="Some"/>
+            <property name="include_target" value="sometable"/>
+        </include>
+    </select>
+
     <resultMap id="blogMap" type="blog" autoMapping="true">
         <id column="id" property="id"/>
         <result column="time" property="time" javaType="java.util.Date" jdbcType="VARCHAR"
@@ -13,11 +36,11 @@
                     select="selectCommentByBlogId" autoMapping="true"/>
     </resultMap>
 
-<!--    <select id="getBlogById" resultMap="blogMap">-->
-<!--        select *-->
-<!--        from blog-->
-<!--        where id = #{id}-->
-<!--    </select>-->
+    <!--    <select id="getBlogById" resultMap="blogMap">-->
+    <!--        select *-->
+    <!--        from blog-->
+    <!--        where id = #{id}-->
+    <!--    </select>-->
 
     <select id="selectUserByBlogId" resultType="user">
         select *

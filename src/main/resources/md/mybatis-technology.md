@@ -183,7 +183,7 @@ MapperProxy
 MapperMethod  
 封装Mapper接口中对应方法的信息，以及对应的sql语句信息。可以在多个代理对象之间共享  
 一个连接Mapper接口和映射配置文件中定义的sql语句的桥梁  
-execute根据sql语句类型完成数据库操作并处理返回值  
+execute根据sql语句类型完成数据库操作并处理返回值
 
 SqlCommand
 
@@ -202,14 +202,62 @@ aMethod(int a, RowBounds rb, int b) -> {{0, "0"}, {2, "1"}}
 ```
 
 MethodSignature  
-封装Mapper接口中定义的方法的相关信息  
+封装Mapper接口中定义的方法的相关信息
 
-2.9 缓存
-org.apache.ibatis.cache.Cache接口  
+2.9 缓存 org.apache.ibatis.cache.Cache接口  
 装饰器模式: 动态的为对象添加功能，基于组合的方式实现
 
+PerpetualCache提供了基本实现，被装饰器装饰的原始对象，其他高级功能通过装饰器添加到该类上面  
+通过HashMap记录缓存项
 
+org.apache.ibatis.cache.decorators 提供各种装饰器，在PerpetualCache基础上提供额外功能  
+通过组合完成特定的需求
 
+**BlockingCache**保证只有一个线程到数据库中查找指定key对应的数据  
+每个key都有一个ReentrantLock；线程A在BlockingCache中未查找到keyA对应的缓存项时，线程A会获取keyA对应的锁，后续线程在查找keyA时会发生阻塞  
+线程A从数据库中查到keyA对应的结果后，将结果对象放入BlockingCache里面，释放锁，唤醒阻塞在该锁上的线程  
+其他线程可以从BlockingCache中获取数据，不需要重新访问数据库
+
+**FifoCache LruCache**按照一定的规则清理缓存  
+FifoCache 向缓存中添加数据(Deque LinkedList)时，如果缓存项的个数达到上限，会将缓存中最早进入的缓存项删除  
+LruCache 清空最近最少使用的缓存项(LinkedListHashMap)  
+SoftCache WeakCache  
+ScheduledCache 周期性清理缓存(默认一小时，清空所有缓存项)     
+LoggingCache 提供日志功能 记录命中次数和访问次数，统计命中率    
+SynchronizedCache 用synchronized为Cache添加同步功能
+
+以上从缓存中获取同一key对应的对象都是**同一个**，任意一个线程修改后都会影响到其他线程获取的对象
+
+SerializedCache 提供将value对象序列化功能，将序列化后的byte[]作为value存储缓存，取出时反序列化，所以每次获取到的都是新的对象
+
+CacheKey 缓存中的key  
+可以添加多个对象(存入updateList)，共同决定两个key是否相同
+
+1. MapperStatement的id
+2. 指定查询结果集的范围 RowBounds.offset RowBounds.limit
+3. 查询所使用的sql语句，boundSql.getSql()返回的sql语句，可能包含?占位符
+4. 用户传递给上述sql的实际参数值
+
+#### 核心处理层
+
+MyBatis初始化
+
+1. 读取 mybatis-config.xml 和 XxxMapper.xml配置文件
+2. 加载配置文件中指定的类，处理类中的注解，创建一些配置对象
+
+建造者模式: 将复杂对象的构建过程和表示分离，是的同样的构建过程可以创建不同的表示
+
+BaseBuilder 接口 定义构造者构造产品对象的各部分行为  
+![BaseBuilder继承关系](./image/BaseBuilder继承关系.png)  
+初始化入口 SqlSessionFactoryBuilder.build()
+
+org.apache.ibatis.session.Configuration 初始化过程中创建且全局唯一，MyBatis初始化的核心对象  
+XMLConfigBuilder 负责解析mybatis-config.xml配置文件
+
+```text
+properties, settings, typeAliases, typeHandlers, objectFactory, objectWrapperFactory, reflectorFactory, plugins, environments, databaseIdProvider, mappers
+```
+XMLMapperBuilder 负责解析映射配置文件
 
 
 
