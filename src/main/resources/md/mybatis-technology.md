@@ -171,8 +171,8 @@ TransactionFactory 在指定连接上创建事务对象 或 从指定数据源�
 
 2.8 Binding模块
 
-MapperRegistry MapperProxyFactory    
-MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactoryzhi就的关系  
+MapperRegistry MapperProxyFactory  
+MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactory之间的关系  
 在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，
 key时Mapper接口对应的Class对象，value是MapperProxyFactory工厂对象，为Mapper接口创建代理对象  
 MapperProxyFactory负责创建代理对象
@@ -257,9 +257,48 @@ XMLConfigBuilder 负责解析mybatis-config.xml配置文件
 ```text
 properties, settings, typeAliases, typeHandlers, objectFactory, objectWrapperFactory, reflectorFactory, plugins, environments, databaseIdProvider, mappers
 ```
-XMLMapperBuilder 负责解析映射配置文件
 
+**XMLMapperBuilder** 负责解析映射配置文件(XxxMapper.xml)  
+**MapperAnnotationBuilder**
 
+```text
+cache-ref cache parameterMap resultMap sql select|insert|update|delete
+```
+
+解析cache cache-ref  
+MapperBuilderAssistant 负责创建Cache对象，添加到Configuration.cache(StrictMap<namespace, cache>)中  
+Ambiguity 存在二义性的键值对  
+CacheBuilder 负责建造Cache
+
+解析resultMap(定义结果集和结果对象之间的映射规则)  
+ResultMap 每一个<resultMap>标签被解析成一个ResultMap  
+ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系
+
+**XMLStatementBuilder** 负责继续sql节点语句  
+SqlSource 表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)  
+MappedStatement 表示映射文件中定义的sql节点  
+解析include sql  
+XMLIncludeTransformer 解析sql语句中的<include>标签(将<include>标签替换成<sql>中定义的片段，并将其中的${xxx}占位符替换成真实的参数)
+
+解析selectKey  
+将<include>和<selectKey>节点解析并删除掉  
+解析sql节点，添加到Configuration.mappedStatements集合中保存
+
+绑定Mapper接口  
+每个映射文件的命名空间可以绑定一个Mapper接口，并注册到MapperRegistry中  
+完成映射文件和对于Mapper接口的绑定
+
+解析配置文件是按照文件从头到尾按顺序解析的，如果再解析某一个节点时，引用到了定义在之后的节点，会抛出IncompleteElementException  
+根据抛出异常的节点不同放到不同的集合(incomplete*)中
+
+3.2 SqlNode SqlSource  
+映射配置文件中的sql节点会被解析成MappedStatement  
+sql语句被解析成SqlSource对象(其中定义动态sql节点，文本节点)，通过解析得到BoundSql对象  
+![SqlSource继承关系](./image/SqlSource继承关系.png)  
+RawSqlSource: 负责处理静态语句  
+DynamicSqlSource: 负责处理动态sql语句，封装的sql需要进行一系列的解析，才能形成数据库可执行的sql  
+上面两种都会将处理好的sql语句封装成StaticSqlSource返回  
+StaticSqlSource: 记录的sql可能包含占位符，但是可以直接交给数据库执行  
 
 
 

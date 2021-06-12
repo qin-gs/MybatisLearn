@@ -15,6 +15,12 @@ public class Blog implements Serializable {
     private Date time;
     private List<Comment> comments;
 
+    public static String staticField;
+
+    public static String getStaticField() {
+        return staticField;
+    }
+
     public Blog() {
     }
 

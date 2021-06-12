@@ -4,6 +4,8 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.mybatis.learn.mapper.BlogMapper">
 
+    <cache eviction="LRU" flushInterval="6000" size="512" readOnly="true"/>
+
     <sql id="columns">
         ${alias}.id, ${alias}.name
     </sql>
@@ -23,7 +25,7 @@
         select *
         <include refid="someInclude">
             <property name="prefix" value="Some"/>
-            <property name="include_target" value="sometable"/>
+            <property name="include_target" value="someTable"/>
         </include>
     </select>
 
