@@ -240,7 +240,7 @@ CacheKey 缓存中的key
 
 #### 核心处理层
 
-MyBatis初始化
+3.1 MyBatis初始化
 
 1. 读取 mybatis-config.xml 和 XxxMapper.xml配置文件
 2. 加载配置文件中指定的类，处理类中的注解，创建一些配置对象
@@ -298,7 +298,38 @@ sql语句被解析成SqlSource对象(其中定义动态sql节点，文本节点)
 RawSqlSource: 负责处理静态语句  
 DynamicSqlSource: 负责处理动态sql语句，封装的sql需要进行一系列的解析，才能形成数据库可执行的sql  
 上面两种都会将处理好的sql语句封装成StaticSqlSource返回  
-StaticSqlSource: 记录的sql可能包含占位符，但是可以直接交给数据库执行  
+StaticSqlSource: 记录的sql可能包含占位符，但是可以直接交给数据库执行
+
+采用组合的设计模式处理动态sql节点，解析成SqlNode，形成树形结构  
+OGNL(object graphic navigation language 对象图导航语言)表达式  
+存取java对象树中的属性，调用java对象树中的方法等
+
+DynamicContext 记录解析动态sql语句之后产生的sql语句片段，一个用于记录动态sql语句解析结果的容器，当sql中的所有节点解析完成后，可以从中获取一条动态生成的sql语句  
+SqlNode 解析对应的动态sql节点  
+![SqlNode继承关系](./image/SqlNode继承关系.png)
+
+SqlSourceBuilder
+
+1. 解析sql语句中的占位符(#{__frc_item_0, javaType=int, jdbcType=NUMERIC, typeHandler=MyTypeHandler.class})定义的属性
+2. 将sql语句中的占位符替换成?
+
+ParameterMappingTokenHandler 解析#{}占位符中的参数属性 以及替换占位符  
+ParameterMapping 记录#{}占位符中的参数属性  
+**BoundSql** 记录sql语句 和 参数
+
+DynamicSqlSource 负责解析动态sql语句  
+SqlSourceBuilder
+
+RawSqlSource
+
+XmlScriptBuilder中判断sql节点是否为动态的  
+如果某个节点只包含${}占位符，不包含动态sql节点或未解析的${}占位符，则不是动态语句 创建 StaticSqlSource 对象  
+如果整个节点不是动态的sql节点，创建 RawSqlSource 对象
+
+3.3 ResultSetHandler  
+StatementHandler接口在执行完指定的select语句之后，将查询到的结果交给ResultSetHandler完成映射处理 或 处理存储过程执行后的输出参数  
+DefaultResultSetHandler   
+
 
 
 
