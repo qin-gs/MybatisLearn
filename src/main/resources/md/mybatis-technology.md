@@ -9,30 +9,48 @@
 #### 基础支持层
 
 2.1 解析器模块  
-相关类(org.mybatis.ibatis.parsing)：XPathParser XNode TokenHandler PropertyParser
+相关类(org.mybatis.ibatis.parsing)：XPathParser XNode TokenHandler PropertyParser  
+GenericTokenParser 字占位符解析器：按顺序查找openToken和closeToken，解析得到占位符的字面量，交给TokenHandler处理，将解析结果 重新拼装成字符串并返回  
+不仅可以用于默认值解析，也可以用于动态sql语句的解析
+
+TokenHandler有四个实现
+
+1. VariableTokenHandler(PropertyParser的私有静态内部类)
+2. ParameterMappingTokenHandler
+3. DynamicCheckerTokenParser
+4. BindingTokenParser
 
 2.2 反射工具
 
 1. **Reflector**(缓存反射操作需要使用的类的元信息)  
    JavaBean:
-   字段: 定义的成员变量 属性: 通过getter/setter得到的(只与类中的方法有关，与是否存在成员变量没有关系)
+   字段: 定义的成员变量 属性: 通过getter/setter得到的(只与类中的方法有关，与是否存在成员变量没有关系)  
+   定义的字段：
+    1. 可读/写属性的名称集合 String[]
+    2. 属性相应的setter/getter方法 Map<String, Invoker> (key: 属性名称, value: 对应setter/getter方法对应Method对象的封装)
+    3. 属性相应setter/getter方法的返回值类型 Map<String, Class<?>> (key: 属性名, value: setter/getter方法的返回值类型)
+    4. 默认的构造方法 Constructor<?>
+    5. 所有属性名称的集合
 
 Map<String, Invoker> getMethods = new HashMap<>();  
 ![invoker接口](./image/invoker接口.png)
+invoke(Object target, Object[] args)  用于获取指定字段的值(getXxx)或执行指定的方法(Method.invoke())  
+getType() 返回属性相应的类型
 
-addGetMethods(clazz) 处理clazz中的getter方法，填充getMethods和getTypes集合
-
-1. getClassMethods(clazz) 获取当前类及其父类中定义的所有方法的唯一签名 和 对应的Methods对象
-2. resolveGetterConflicts 子类覆盖父类的getter方法且返回值发生变化时，处理冲突
-3. addGetMethod 完成getMethods 和 getTypes 集合的填充
-
-addFields(clazz) 处理类中定义的所有字段，将处理后的字段信息添加到集合中
-(final static can only be set by the classloader)
+1. 查找默认的构造方法(无参的)
+2. addGetMethods(clazz) 处理clazz中的getter方法，填充getMethods和getTypes集合
+    1. getClassMethods(clazz) 获取当前类及其父类中定义的所有方法的唯一签名 和 对应的Method对象
+    2. 从上面方法中返回的数组中查找该类中定义的所有getter方法(暂时存放到conflictingGetters集合中)
+    3. resolveGetterConflicts 子类覆盖父类的getter方法且返回值发生变化时，处理冲突
+5. addFields(clazz) 处理类中定义的所有字段，将处理后的字段信息添加到集合中(final static can only be set by the classloader)  
+   同时提供了多个get*()方法用于读取上述集合中记录的元信息
 
 ReflectorFactory接口 实现对Reflector对象的创建和缓存  
-DefaultReflectorFactory
+DefaultReflectorFactory  
+使用ConcurrentHashMap<Class, Reflector>完成对Reflector对象的缓存
 
 2. **TypeParameterResolver**  
+   ![Type继承关系](./image/Type继承关系.png)  
    java.lang.reflect.Type接口:
     1. 子接口: ParameterizedType, GenericArrayType, TypeVariable, WildcardType
         1. ParameterizedType 参数化类型 List<String>  
@@ -49,8 +67,7 @@ DefaultReflectorFactory
            Type[] getUpperBounds 返回泛型变量上界  
            Type[] getLowerBounds 返回泛型变量下界
     2. 实现类: Class
-        1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在NM 里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()
-           ”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
+        1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
 
 TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型
 
