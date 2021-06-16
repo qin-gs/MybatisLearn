@@ -33,7 +33,7 @@ TokenHandler有四个实现
     5. 所有属性名称的集合
 
 Map<String, Invoker> getMethods = new HashMap<>();  
-![invoker接口](./image/invoker接口.png)
+![invoker接口](./image/invoker接口.png)  
 invoke(Object target, Object[] args)  用于获取指定字段的值(getXxx)或执行指定的方法(Method.invoke())  
 getType() 返回属性相应的类型
 
@@ -67,7 +67,8 @@ DefaultReflectorFactory
            Type[] getUpperBounds 返回泛型变量上界  
            Type[] getLowerBounds 返回泛型变量下界
     2. 实现类: Class
-        1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
+        1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()
+           ”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
 
 TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型  
 resolveFieldType() 解析字段类型
@@ -83,18 +84,25 @@ resolveFieldType() 解析字段类型
 
 4. **Property**工具类
     1. PropertyTokenizer Iterable 对传入的表达式进行解析 (orders[0].items[0].name)
-       当前表达式，当前表达式的索引名，索引下标，子表达式   
+       当前表达式，当前表达式的索引名，索引下标，子表达式
     2. PropertyNamer 完成方法名到属性名的转换(将方法名开头的is, get, set去掉并将首字母小写)
     3. PropertyCopier 完成相同类型的两个对象之间的属性值拷贝
 
 5. **MetaClass**  
-   MetaClass 构造函数是私有的，通过静态方法(forClass)创建
-   通过组合Reflector和PropertyTokenizer完成对复杂属性表达式的解析，并获取指定属性描述信息  
-   封装一个Reflector对象(通过ReflectorFactory创建),
-   类级别的元信息封装和处理
+   MetaClass 构造函数是私有的，通过静态方法(forClass)创建 通过组合Reflector和PropertyTokenizer完成对复杂属性表达式的解析，并获取指定属性描述信息  
+   封装一个Reflector对象(通过ReflectorFactory创建), 类级别的元信息封装和处理
 
 6. **ObjectWrapper**
    对象级别的元信息处理：抽象了对象的属性信息，定义一系列查询和更新对象属性信息的方法  
+   get(PropertyTokenizer) // 如果封装的是普通对象，调用相应属性对应的getter方法；如果是集合，获取指定key或下标对应的value (set(PropertyTokenizer, Object value)
+   设置值)  
+   findProperty(String, boolean) 查找属性表达式指定的属性 (是否忽略下划线)  
+   getGetter/SetterNames 查找可写/读属性的名称集合  
+   getGetter/SetterType 解析属性表达式指定属性的getter的参数类型/setter方法的返回值类型  
+   hasGetter/Setter 判断指定属性是否有getter/setter方法  
+   instantiatePropertyValue 为属性表达式的指定属性创建相应的MetaObject对象  
+   isCollection add addAll (封装对象是否是Collection集合，向集合中添加对象)
+
    ObjectWrapperFactory(实现类DefaultObjectWrapperFactory不可用)负责创建ObjectWrapper  
    ![ObjectWrapper继承关系.png](./image/ObjectWrapper继承关系.png)
 
