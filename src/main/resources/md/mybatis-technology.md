@@ -69,20 +69,28 @@ DefaultReflectorFactory
     2. 实现类: Class
         1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
 
-TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型
+TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型  
+resolveFieldType() 解析字段类型
 
 3. **ObjectFactory**  
-   通过多个重载的create方法创建对象  
-   DefaultObjectFactory是唯一实现  
-   instantiateClass根据传入的参数列表选择合适的构造函数实例化对象
+   通过多个重载的create方法创建对象
+    1. 设置配置信息
+    2. 通过无参构造函数创建指定对象
+    3. 根据参数列表选择指定的构造函数创建对象
+    4. 检测指定类型是否为集合(用来处理java.util.Collection及其子类)
+       DefaultObjectFactory是唯一实现  
+       instantiateClass根据传入的参数列表选择合适的构造函数实例化对象
 
 4. **Property**工具类
     1. PropertyTokenizer Iterable 对传入的表达式进行解析 (orders[0].items[0].name)
-    2. PropertyNamer 完成方法名到属性名的转换
+       当前表达式，当前表达式的索引名，索引下标，子表达式   
+    2. PropertyNamer 完成方法名到属性名的转换(将方法名开头的is, get, set去掉并将首字母小写)
     3. PropertyCopier 完成相同类型的两个对象之间的属性值拷贝
 
 5. **MetaClass**  
-   完成对复杂属性表达式的解析，并获取指定属性描述信息  
+   MetaClass 构造函数是私有的，通过静态方法(forClass)创建
+   通过组合Reflector和PropertyTokenizer完成对复杂属性表达式的解析，并获取指定属性描述信息  
+   封装一个Reflector对象(通过ReflectorFactory创建),
    类级别的元信息封装和处理
 
 6. **ObjectWrapper**
