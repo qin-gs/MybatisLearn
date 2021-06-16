@@ -32,22 +32,22 @@ TokenHandler有四个实现
     4. 默认的构造方法 Constructor<?>
     5. 所有属性名称的集合
 
-Map<String, Invoker> getMethods = new HashMap<>();  
-![invoker接口](./image/invoker接口.png)  
-invoke(Object target, Object[] args)  用于获取指定字段的值(getXxx)或执行指定的方法(Method.invoke())  
-getType() 返回属性相应的类型
+   Map<String, Invoker> getMethods = new HashMap<>();  
+   ![invoker接口](./image/invoker接口.png)  
+   invoke(Object target, Object[] args)  用于获取指定字段的值(getXxx)或执行指定的方法(Method.invoke())  
+   getType() 返回属性相应的类型
 
-1. 查找默认的构造方法(无参的)
-2. addGetMethods(clazz) 处理clazz中的getter方法，填充getMethods和getTypes集合
-    1. getClassMethods(clazz) 获取当前类及其父类中定义的所有方法的唯一签名 和 对应的Method对象
-    2. 从上面方法中返回的数组中查找该类中定义的所有getter方法(暂时存放到conflictingGetters集合中)
-    3. resolveGetterConflicts 子类覆盖父类的getter方法且返回值发生变化时，处理冲突
-5. addFields(clazz) 处理类中定义的所有字段，将处理后的字段信息添加到集合中(final static can only be set by the classloader)  
-   同时提供了多个get*()方法用于读取上述集合中记录的元信息
+    1. 查找默认的构造方法(无参的)
+    2. addGetMethods(clazz) 处理clazz中的getter方法，填充getMethods和getTypes集合
+        1. getClassMethods(clazz) 获取当前类及其父类中定义的所有方法的唯一签名 和 对应的Method对象
+        2. 从上面方法中返回的数组中查找该类中定义的所有getter方法(暂时存放到conflictingGetters集合中)
+        3. resolveGetterConflicts 子类覆盖父类的getter方法且返回值发生变化时，处理冲突
+    5. addFields(clazz) 处理类中定义的所有字段，将处理后的字段信息添加到集合中(final static can only be set by the classloader)  
+       同时提供了多个get*()方法用于读取上述集合中记录的元信息
 
-ReflectorFactory接口 实现对Reflector对象的创建和缓存  
-DefaultReflectorFactory  
-使用ConcurrentHashMap<Class, Reflector>完成对Reflector对象的缓存
+   ReflectorFactory接口 实现对Reflector对象的创建和缓存  
+   DefaultReflectorFactory  
+   使用ConcurrentHashMap<Class, Reflector>完成对Reflector对象的缓存
 
 2. **TypeParameterResolver**  
    ![Type继承关系](./image/Type继承关系.png)  
@@ -70,8 +70,9 @@ DefaultReflectorFactory
         1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()
            ”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
 
-TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型  
-resolveFieldType() 解析字段类型
+   TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型  
+   存在复杂继承关系以及泛型定义时，该类帮助解析字段、方法参数、或方法返回值的类型  
+   resolveFieldType() 解析字段类型
 
 3. **ObjectFactory**  
    通过多个重载的create方法创建对象
@@ -90,6 +91,7 @@ resolveFieldType() 解析字段类型
 
 5. **MetaClass**  
    MetaClass 构造函数是私有的，通过静态方法(forClass)创建 通过组合Reflector和PropertyTokenizer完成对复杂属性表达式的解析，并获取指定属性描述信息  
+   findProperty hasGetter hasSetter  
    封装一个Reflector对象(通过ReflectorFactory创建), 类级别的元信息封装和处理
 
 6. **ObjectWrapper**
@@ -104,7 +106,14 @@ resolveFieldType() 解析字段类型
    isCollection add addAll (封装对象是否是Collection集合，向集合中添加对象)
 
    ObjectWrapperFactory(实现类DefaultObjectWrapperFactory不可用)负责创建ObjectWrapper  
-   ![ObjectWrapper继承关系.png](./image/ObjectWrapper继承关系.png)
+   ![ObjectWrapper继承关系.png](./image/ObjectWrapper继承关系.png)  
+   BaseWrapper(处理集合)
+    1. resolveCollection 解析属性表达式并获取指定的属性
+    2. get/setCollectionValue 解析属性表达式的索引信息，然后获取/设置对应项
+
+   BeanWrapper(处理bean对象)  
+   MapWrapper(处理Map<String, Object>类型的对象)  
+   CollectionWrapper(不可用)
 
 7. **MetaObject**
    完成属性表达式的解析过程
