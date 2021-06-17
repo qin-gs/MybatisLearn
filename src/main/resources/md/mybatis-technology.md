@@ -120,14 +120,27 @@ TokenHandler有四个实现
 
 2.3 **TypeHandler**类型转换  
 完成Java类型 和 JDBC类型的互相转换  
-enum JdbcType代表JDBC中的数据类型，HashMap<TYPE_CODE, JdbcType>维护常量编码和JdbcType的关系  
+用于完成单个参数以及单个列值的类型转换，如果存在多列值转换成一个java对象，应有限考虑<resultMap>  
+enum JdbcType代表JDBC中的数据类型，HashMap<TYPE_CODE, JdbcType>维护常量编码和JdbcType的关系
+
 所有的类型转换器全部继承TypeHandler
 
 1. setParameter 通过PreparedStatement为sql语句绑定参数时，将数据从JdbcType类型转换成Java类型
 2. getResult 从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型
 
-TypeHandlerRegistry 管理众多的TypeHandler  
-mybaits初始化时，会为所有已知的TypeHandler创建对象，注册在其中
+BaseTypeHandler 实现了TypeHandler接口，对于数据非空处理都交给了子类
+
+TypeHandlerRegistry 管理众多的TypeHandler，MyBaits初始化时，会为所有已知的TypeHandler创建对象，注册在其中
+
+1. 记录JdbcType与TypeHandler的对应关系(用于从结果集读取数据时，将数据从Jdbc类型转换成Java类型 char, varchar -> java.lang.String)
+2. 记录Java类型向指定JdbcType转换时，需要使用的TypeHandler对象(一对多 java.lang.String -> char, varchar)
+3. 记录全部TypeHandler的类型 和 相应的对象
+4. 一个空TypeHandler集合标识
+
+注册TypeHandler  
+通过读取(@MappedJdbcTypes(JdbcType.VARCHAR), @MappedTypes({Date.class}))两个注解的内容，注册进去 或 扫描包下的类注册进去  
+查找TypeHandler  
+根据指定的JavaType 和 JdbcType查找相应的TypeHandler对象
 
 TypeAliasRegistry 完成别名注册和管理功能(管理别名和java类型之间的关系)
 
