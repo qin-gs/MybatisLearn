@@ -142,7 +142,10 @@ TypeHandlerRegistry 管理众多的TypeHandler，MyBaits初始化时，会为所
 查找TypeHandler  
 根据指定的JavaType 和 JdbcType查找相应的TypeHandler对象
 
-TypeAliasRegistry 完成别名注册和管理功能(管理别名和java类型之间的关系)
+TypeAliasRegistry 完成别名注册和管理功能(管理别名和java类型之间的关系)  
+registerAlias(String, Class) key转小写放入  
+registerAliases(packageName, Class) 扫描指定包下的所有类，为指定类的子类添加别名  
+registerAlias(Class) 尝试读取@Alias注解
 
 2.4 日志模块  
 设计模式六大原则：
@@ -228,27 +231,28 @@ TransactionFactory 在指定连接上创建事务对象 或 从指定数据源�
 
 MapperRegistry MapperProxyFactory  
 MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactory之间的关系  
-在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，
-key时Mapper接口对应的Class对象，value是MapperProxyFactory工厂对象，为Mapper接口创建代理对象  
-MapperProxyFactory负责创建代理对象
+在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，  
+Map<Class, MapperProxyFactory> knowMappers = new HashMap<Mapper接口对于的Class对象, MapperProxyFactory工厂对象，为Mapper接口创建代理对象>()  
+MapperProxyFactory负责创建代理对µ象
 
 MapperProxy  
 实现类InvocationHandler接口，为接口(@Mapper)创建代理对象
 
-MapperMethod  
+**MapperMethod(记录sql语句信息)**  
 封装Mapper接口中对应方法的信息，以及对应的sql语句信息。可以在多个代理对象之间共享  
 一个连接Mapper接口和映射配置文件中定义的sql语句的桥梁  
-execute根据sql语句类型完成数据库操作并处理返回值
+execute根据sql语句类型(insert, update...)完成数据库操作并处理返回值(Bean, Map, List, [], void...)
 
-SqlCommand
+SqlCommand(内部类)
 
-1. name记录sql语句的名称
+1. name记录sql语句的名称(接口名.方法名)
 2. type记录sql语句类型(unknown, select, insert, update, delete, flush)
 
-ParamNameResolver  
+**ParamNameResolver**  
 处理Mapper接口中定义的方法的参数列表  
 SortedMap<Integer, String> names 记录参数列表中的**位置索引**和**参数名称/参数索引**之间的对应关系(第key个位置是第value个参数)  
-RowBounds 和 ResultHandler不会被记录
+RowBounds 和 ResultHandler不会被记录  
+将实参与对应的名称进行关联 Map<String, Object> param {{0, val1}, {param1, val2}, {1, val2}, {param2, val2}}
 
 ```text
 aMethod(@Param("M") int a, @Param("N") int b) -> {{0, "M"}, {1, "N"}}
@@ -256,11 +260,16 @@ aMethod(int a, int b) -> {{0, "0"}, {1, "1"}}
 aMethod(int a, RowBounds rb, int b) -> {{0, "0"}, {2, "1"}}
 ```
 
-MethodSignature  
-封装Mapper接口中定义的方法的相关信息
+MethodSignature(内部类)  
+封装Mapper接口中定义的方法的相关信息  
+返回值是否为Collection, Map, void, Cursor; 返回值类型  
+如果返回map，记录key的名字  
+记录RowBounds, ResultHandler的位置  
+记录该方法对应的ParamNameResolver对象
 
 2.9 缓存 org.apache.ibatis.cache.Cache接口  
-装饰器模式: 动态的为对象添加功能，基于组合的方式实现
+装饰器模式: 动态的为对象添加功能，基于组合的方式实现  
+Cache定义(缓存对象id, 向缓存中加数据, 根据指定key查找缓存项, 删除key对应的缓存项, 清空缓存, 获取缓存个数)
 
 PerpetualCache提供了基本实现，被装饰器装饰的原始对象，其他高级功能通过装饰器添加到该类上面  
 通过HashMap记录缓存项
