@@ -273,7 +273,8 @@ MethodSignature(内部类)
 
 2.9 缓存 org.apache.ibatis.cache.Cache接口  
 装饰器模式: 动态的为对象添加功能，基于组合的方式实现  
-Cache定义(缓存对象id, 向缓存中加数据, 根据指定key查找缓存项, 删除key对应的缓存项, 清空缓存, 获取缓存个数)
+Cache定义(缓存对象id, 向缓存中加数据, 根据指定key查找缓存项, 删除key对应的缓存项, 清空缓存, 获取缓存个数)  
+Cache中唯一确定一个缓存项是通过缓存项中的key, 使用CacheKey表示(封装多个影响缓存项的因素)
 
 PerpetualCache提供了基本实现，被装饰器装饰的原始对象，其他高级功能通过装饰器添加到该类上面  
 通过HashMap记录缓存项
@@ -281,17 +282,17 @@ PerpetualCache提供了基本实现，被装饰器装饰的原始对象，其他
 org.apache.ibatis.cache.decorators 提供各种装饰器，在PerpetualCache基础上提供额外功能  
 通过组合完成特定的需求
 
-**BlockingCache**保证只有一个线程到数据库中查找指定key对应的数据  
+BlockingCache保证只有一个线程到数据库中查找指定key对应的数据  
 每个key都有一个ReentrantLock；线程A在BlockingCache中未查找到keyA对应的缓存项时，线程A会获取keyA对应的锁，后续线程在查找keyA时会发生阻塞  
 线程A从数据库中查到keyA对应的结果后，将结果对象放入BlockingCache里面，释放锁，唤醒阻塞在该锁上的线程  
 其他线程可以从BlockingCache中获取数据，不需要重新访问数据库
 
-**FifoCache LruCache**按照一定的规则清理缓存  
+FifoCache LruCache按照一定的规则清理缓存  
 FifoCache 向缓存中添加数据(Deque LinkedList)时，如果缓存项的个数达到上限，会将缓存中最早进入的缓存项删除  
 LruCache 清空最近最少使用的缓存项(LinkedListHashMap)  
 SoftCache WeakCache  
-ScheduledCache 周期性清理缓存(默认一小时，清空所有缓存项)     
-LoggingCache 提供日志功能 记录命中次数和访问次数，统计命中率    
+ScheduledCache 周期性清理缓存(默认一小时，清空所有缓存项)  
+LoggingCache 提供日志功能 记录命中次数和访问次数，统计命中率  
 SynchronizedCache 用synchronized为Cache添加同步功能
 
 以上从缓存中获取同一key对应的对象都是**同一个**，任意一个线程修改后都会影响到其他线程获取的对象
@@ -313,7 +314,7 @@ CacheKey 缓存中的key
 1. 读取 mybatis-config.xml 和 XxxMapper.xml配置文件
 2. 加载配置文件中指定的类，处理类中的注解，创建一些配置对象
 
-建造者模式: 将复杂对象的构建过程和表示分离，是的同样的构建过程可以创建不同的表示
+建造者模式: 将复杂对象的构建过程和表示分离，同样地构建过程可以创建不同的表示
 
 BaseBuilder 接口 定义构造者构造产品对象的各部分行为  
 ![BaseBuilder继承关系](./image/BaseBuilder继承关系.png)  
@@ -330,7 +331,7 @@ properties, settings, typeAliases, typeHandlers, objectFactory, objectWrapperFac
 **MapperAnnotationBuilder**
 
 ```text
-cache-ref cache parameterMap resultMap sql select|insert|update|delete
+cache-ref cache resultMap sql select|insert|update|delete
 ```
 
 解析cache cache-ref  
@@ -342,8 +343,9 @@ CacheBuilder 负责建造Cache
 ResultMap 每一个<resultMap>标签被解析成一个ResultMap  
 ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系
 
-**XMLStatementBuilder** 负责继续sql节点语句  
+**XMLStatementBuilder** 负责解析sql节点语句  
 SqlSource 表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)  
+getBoundSql(args) 根据映射文件或注解的sql + 传入的参数返回可执行的sql  
 MappedStatement 表示映射文件中定义的sql节点  
 解析include sql  
 XMLIncludeTransformer 解析sql语句中的<include>标签(将<include>标签替换成<sql>中定义的片段，并将其中的${xxx}占位符替换成真实的参数)
@@ -354,7 +356,7 @@ XMLIncludeTransformer 解析sql语句中的<include>标签(将<include>标签替
 
 绑定Mapper接口  
 每个映射文件的命名空间可以绑定一个Mapper接口，并注册到MapperRegistry中  
-完成映射文件和对于Mapper接口的绑定
+XMLMapperBuilder.bindMapperForNamespace方法 完成映射文件和对于Mapper接口的绑定
 
 解析配置文件是按照文件从头到尾按顺序解析的，如果再解析某一个节点时，引用到了定义在之后的节点，会抛出IncompleteElementException  
 根据抛出异常的节点不同放到不同的集合(incomplete*)中
@@ -372,7 +374,8 @@ StaticSqlSource: 记录的sql可能包含占位符，但是可以直接交给数
 OGNL(object graphic navigation language 对象图导航语言)表达式  
 存取java对象树中的属性，调用java对象树中的方法等
 
-DynamicContext 记录解析动态sql语句之后产生的sql语句片段，一个用于记录动态sql语句解析结果的容器，当sql中的所有节点解析完成后，可以从中获取一条动态生成的sql语句  
+DynamicContext  
+记录解析动态sql语句之后产生的sql语句片段，一个用于记录动态sql语句解析结果的容器，当sql中的所有节点解析完成后，可以从中获取一条动态生成的sql语句  
 SqlNode 解析对应的动态sql节点  
 ![SqlNode继承关系](./image/SqlNode继承关系.png)
 
@@ -396,7 +399,7 @@ XmlScriptBuilder中判断sql节点是否为动态的
 
 3.3 ResultSetHandler  
 StatementHandler接口在执行完指定的select语句之后，将查询到的结果交给ResultSetHandler完成映射处理 或 处理存储过程执行后的输出参数  
-DefaultResultSetHandler   
+DefaultResultSetHandler 是唯一实现  
 
 
 
