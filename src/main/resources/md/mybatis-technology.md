@@ -194,10 +194,14 @@ ResultLogger 封装ResultSet对象并为其创建代理对象 (展示查询结�
 
 2.5 资源加载  
 org.apache.ibatis.io包封装ClassLoader以及读取资源文件的API  
-ClassLoaderWrapper是ClassLoader包装器  
-Resources 通过类加载器读取资源文件  
+ClassLoaderWrapper是ClassLoader包装器，确保返回给系统的时正确的加载器(安装指定的顺序依次检测封装的ClassLoader对象，从中选择一个可以的完成相关功能)  
+包含 系统指定的默认加载 和 系统类(应用程序类)加载器  
+类加载器顺序 [参数指定的类加载器，系统值的默认加载器，当前线程绑定的类加载器，加载当前类使用的类加载器，系统类加载器]  
+Resources 调用封装的ClassLoaderWrapper返回数据  
 ResolverUtil 根据指定条件查找指定包下的类  
-VFS 虚拟文件系统 查找指定路径下的资源
+条件Test(只有一个matches<Class>方法, IsA(检测类是否继承类指定类或接口) AnnotatedWith(检测类是否添加了指定注解))，类中封装了当前使用的类加载器(默认时当前线程上下文绑定的ClassLoader(Thread.currentThread().getContextClassLoader()))  
+单例模式(volatile禁止指令重排序；第一次访问类中的静态字段时，会触发类的加载)  
+VFS 虚拟文件系统 查找指定路径下的资源，包括jar包
 
 2.6 DataSource  
 实现javax.sql.DataSource接口  
@@ -205,7 +209,7 @@ PooledDataSource 和 UnpooledDataSource 使用工厂创建
 工厂方法模式：添加新产品时，只需要添加对应的工厂实现类，而不必修改已有的代码。符合开放封闭原则。同时工厂方法先调用者隐藏具体产品的实例化细节 调用者只需要了解工厂接口和产品接口，面向接口编程。  
 但是新增新产品实现类时，还要提供一个与之对应的工厂实现类，新增的类是成对实现的。
 
-org.apache.ibatis.datasource.DataSourceFactory 工厂接口  
+org.apache.ibatis.datasource.DataSourceFactory 工厂接口(配置属性，获取数据源)  
 UnpooledDataSourceFactory, PooledDataSourceFactory 两个工厂接口实现类  
 ![DataSourceFactory继承关系.png](./image/DataSourceFactory继承关系.png)  
 javax.sql.DataSource 产品接口  
