@@ -199,7 +199,8 @@ ClassLoaderWrapper是ClassLoader包装器，确保返回给系统的时正确的
 类加载器顺序 [参数指定的类加载器，系统值的默认加载器，当前线程绑定的类加载器，加载当前类使用的类加载器，系统类加载器]  
 Resources 调用封装的ClassLoaderWrapper返回数据  
 ResolverUtil 根据指定条件查找指定包下的类  
-条件Test(只有一个matches<Class>方法, IsA(检测类是否继承类指定类或接口) AnnotatedWith(检测类是否添加了指定注解))，类中封装了当前使用的类加载器(默认时当前线程上下文绑定的ClassLoader(Thread.currentThread().getContextClassLoader()))  
+条件Test(只有一个matches<Class>方法, IsA(检测类是否继承类指定类或接口) AnnotatedWith(检测类是否添加了指定注解))，类中封装了当前使用的类加载器(默认时当前线程上下文绑定的ClassLoader(
+Thread.currentThread().getContextClassLoader()))  
 单例模式(volatile禁止指令重排序；第一次访问类中的静态字段时，会触发类的加载)  
 VFS 虚拟文件系统 查找指定路径下的资源，包括jar包
 
@@ -226,6 +227,8 @@ UnpooledDataSource, PooledDataSource 两个产品类
 
 2.7 Transaction  
 org.apache.ibatis.transaction.Transaction 接口  
+获取数据库连接 提交事务 回滚事务 关闭数据库连接 获取事务超时时间
+
 ![Transaction继承关系.png](./image/Transaction继承关系.png)  
 JdbcTransaction JdbcTransactionFactory 依赖Jdbc Connection控制事务的提交和回滚  
 ManagedTransaction ManagedTransactionFactory 依赖容器控制事务的提交回滚  
@@ -235,9 +238,9 @@ TransactionFactory 在指定连接上创建事务对象 或 从指定数据源�
 
 MapperRegistry MapperProxyFactory  
 MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactory之间的关系  
-在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，  
-Map<Class, MapperProxyFactory> knowMappers = new HashMap<Mapper接口对于的Class对象, MapperProxyFactory工厂对象，为Mapper接口创建代理对象>()  
-MapperProxyFactory负责创建代理对µ象
+在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，
+key时Mapper接口对应的Class对象，value是MapperProxyFactory工厂对象，为Mapper接口创建代理对象  
+MapperProxyFactory负责创建实现了MapperInterface接口的代理对象
 
 MapperProxy  
 实现类InvocationHandler接口，为接口(@Mapper)创建代理对象
@@ -341,7 +344,9 @@ CacheBuilder 负责建造Cache
 
 解析resultMap(定义结果集和结果对象之间的映射规则)  
 ResultMap 每一个<resultMap>标签被解析成一个ResultMap  
-ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系
+(id, type...)  
+ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系  
+(column, property, javaType, jdbcType, typeHandler)
 
 **XMLStatementBuilder** 负责解析sql节点语句  
 SqlSource 表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)  
@@ -400,6 +405,58 @@ XmlScriptBuilder中判断sql节点是否为动态的
 3.3 ResultSetHandler  
 StatementHandler接口在执行完指定的select语句之后，将查询到的结果交给ResultSetHandler完成映射处理 或 处理存储过程执行后的输出参数  
 DefaultResultSetHandler 是唯一实现  
+handleResultSets() // 处理Statement, PreparedStatement产生的结果集，还可以处理CallableStatement调用存储过程产生的多结果集(select resultSets="
+user,blog")
+
+```xml
+
+<div>
+    <select id="selectBlog" resultSets="blog,authors" resultMap="blogResult" statementType="CALLABLE">
+        { call getBlogsAuthors(#{id, jdbcType=INTEGER, mode=IN}) }
+    </select>
+    <resultMap id="blogResult" type="Blog">
+        <constructor>
+            <idArg column="id" javaType="int"/>
+        </constructor>
+        <result property="title" column="title"/>
+        <association property="author" javaType="Author" resuoltSet="authors" column="author_id" foreignCOlumn="id">
+            <id property="id" column="id"/>
+            <result property="username" column="username"/>
+            <result property="password" column="password"/>
+        </association>
+    </resultMap>
+</div>
+
+```
+
+ResultSetWrapper  
+将从数据库中查询得到的ResultSet对象封装成ResultSetWrapper然后进行处理  
+ResultSetWrapper记录了ResultSet中的一些元数据，并提供一系列操作ResultSet的辅助方法  
+记录了了每列的(列名，java类型，jdbc类型，TypeHandler对象(Map)，被映射的列名，未映射的列名)
+
+单个ResultSet的映射
+
+1. 调用skipRows()方法，根据Row Bounds 中的offset 值定位到指定的记录行.
+2. 调用shouldProcessMoreRows()方法， 检测是否还有需要映射的记录.
+3. 通过resolveDiscriminatedResultMap()方法， 确定映射使用的ResultMap 对象.
+4. 调用getRowValue()方法对ResultSet 中的一行记录进行映射:
+    1. 通过createResultObject()方法创建映射后的结果对象.
+    2. 通过shouldApplyAutomaticMappings()方法判断是否开启了自动映射功能.
+    3. 通过applyAutomaticMappings()方法自动映射ResultMap中未明确映射的列.
+    4. 通过applyPropertyMappings()方法映射ResultMap中明确映射列，到这里该行记录的数据已经完全映射到了结果对象的相应属性中.
+5. 调用storeObject()方法保存映射得到的结果对象.
+
+ResultHandler  
+select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的情形下使用  
+`void handleResult(ResultContext<? extends T> resultContext);`  
+ResultHandler 参数允许自定义每行结果的处理过程。可以将它添加到 List 中、创建 Map 和 Set，甚至丢弃每个返回值，只保留计算后的统计结果  
+ResultContext 参数允许你访问结果对象和当前已被创建的对象数目(使用带 ResultHandler 参数的方法时，收到的数据不会被缓存)
+
+![ResultHandler继承关系](./image/ResultHandler继承关系.png)
+DefaultResultHandler: 使用List暂存的结果  
+DefaultMapResultHandler: 使用Map暂存结果
+
+DefaultResultContext  
 
 
 

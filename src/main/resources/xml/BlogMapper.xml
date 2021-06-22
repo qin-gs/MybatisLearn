@@ -11,8 +11,12 @@
     </sql>
     <select id="testColumn" resultType="map">
         select
-            <include refid="columns"><property name="alias" value="v1"/></include>
-            <include refid="columns"><property name="alias" value="v2"/></include>
+        <include refid="columns">
+            <property name="alias" value="v1"/>
+        </include>
+        <include refid="columns">
+            <property name="alias" value="v2"/>
+        </include>
         from blog
     </select>
 
@@ -36,6 +40,11 @@
         <association property="author" column="id" select="selectUserByBlogId"/>
         <collection property="comments" column="id" javaType="ArrayList" ofType="comment"
                     select="selectCommentByBlogId" autoMapping="true"/>
+        <!--  鉴别器：类似于switch      -->
+        <!--        <discriminator javaType="int" column="age">-->
+        <!--            <case value="1" resultMap="user"></case>-->
+        <!--            <case value="2" resultMap="blog"></case>-->
+        <!--        </discriminator>-->
     </resultMap>
 
     <!--    <select id="getBlogById" resultMap="blogMap">-->
