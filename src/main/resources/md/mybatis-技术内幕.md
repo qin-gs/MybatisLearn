@@ -436,10 +436,12 @@ ResultSetWrapper记录了ResultSet中的一些元数据，并提供一系列操�
 
 单个ResultSet的映射
 
-1. 调用skipRows()方法，根据Row Bounds 中的offset 值定位到指定的记录行.
-2. 调用shouldProcessMoreRows()方法， 检测是否还有需要映射的记录.
-3. 通过resolveDiscriminatedResultMap()方法， 确定映射使用的ResultMap 对象.
-4. 调用getRowValue()方法对ResultSet 中的一行记录进行映射:
+DefaultResultSetHandler.handleResultSet -> handleRowValues -> handleRowValuesForSimpleResultMap
+
+1. 调用skipRows()方法，根据RowBounds中的offset 值定位到指定的记录行.
+2. 调用shouldProcessMoreRows()方法，检测是否还有需要映射的记录.
+3. 通过resolveDiscriminatedResultMap()方法，确定映射使用的ResultMap对象.
+4. 调用getRowValue()方法对ResultSet中的一行记录进行映射:
     1. 通过createResultObject()方法创建映射后的结果对象.
     2. 通过shouldApplyAutomaticMappings()方法判断是否开启了自动映射功能.
     3. 通过applyAutomaticMappings()方法自动映射ResultMap中未明确映射的列.
@@ -457,6 +459,17 @@ DefaultResultHandler: 使用List暂存的结果
 DefaultMapResultHandler: 使用Map暂存结果
 
 DefaultResultContext  
+暂存映射后的结果对象，对象个数，是否停止映射三个字段
+
+嵌套映射
+
+嵌套查询 延迟加载  
+延迟加载(fetchType, lazyLoadingEnabled)：暂时不用的对象不会真正载入到内存中，真正使用改对象时，才去执行数据库查询操作，将该对象加载到内存中  
+MyBatis中，如果一个对象的某个属性需要延迟加载，在映射该属性时，会为该属性创建相应的代理对象并返回  
+aggressiveLazyLoading(default=false): true表示有延迟加载属性的对象在被调用，将完全加载其属性，否则将按需要加载属性  
+延迟加载通过动态代理实现，由于bean没有实现任何接口，无法使用JDK动态代理，MyBatis中采用的是CGLIB和JAVASSIST  
+cglib采用字节码技术实现动态代理功能，通过字节码技术为目标类生成一个子类，在该类中采用方法拦截的方式拦截父类方法的调用，实现代理功能  
+(无法代理final修饰的方法)  
 
 
 
