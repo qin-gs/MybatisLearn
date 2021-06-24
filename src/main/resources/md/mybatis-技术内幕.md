@@ -454,7 +454,7 @@ select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的
 ResultHandler 参数允许自定义每行结果的处理过程。可以将它添加到 List 中、创建 Map 和 Set，甚至丢弃每个返回值，只保留计算后的统计结果  
 ResultContext 参数允许你访问结果对象和当前已被创建的对象数目(使用带 ResultHandler 参数的方法时，收到的数据不会被缓存)
 
-![ResultHandler继承关系](./image/ResultHandler继承关系.png)
+![ResultHandler继承关系](./image/ResultHandler继承关系.png)  
 DefaultResultHandler: 使用List暂存的结果  
 DefaultMapResultHandler: 使用Map暂存结果
 
@@ -469,7 +469,35 @@ MyBatis中，如果一个对象的某个属性需要延迟加载，在映射该�
 aggressiveLazyLoading(default=false): true表示有延迟加载属性的对象在被调用，将完全加载其属性，否则将按需要加载属性  
 延迟加载通过动态代理实现，由于bean没有实现任何接口，无法使用JDK动态代理，MyBatis中采用的是CGLIB和JAVASSIST  
 cglib采用字节码技术实现动态代理功能，通过字节码技术为目标类生成一个子类，在该类中采用方法拦截的方式拦截父类方法的调用，实现代理功能  
-(无法代理final修饰的方法)  
+(无法代理final修饰的方法)    
+Javassist动态修改类结构，或动态生成类
+
+ResultLoader ResultLoaderMap  
+ResultLoader 负责保存一次延迟加载操作所需的全部信息  
+loadResult 通过excutor执行resultLoader中记录的sql语句返回相应的延迟加载对象
+
+```text
+Configuration对象，用于执行延迟加载操作的Executor对象，延迟执行的sql语句和相关配置信息，sql的实参，延迟加载得到的对象类型，
+延迟加载得到的结果对象，将延迟加载得到的结果对象转换成目标类型，ObjectFactory工厂对象 通过反射创建延迟加载的Java对象，
+CacheKey，创建ResultLoader的线程id  
+```
+
+ResultLoaderMap  
+使用Map<String, LoadPair>保存对象中延迟加载属性和对应的ResultLoader对象  
+key是转换成大写的属性名，value是LoadPair(内部类)  
+load 加载指定名称的属性  
+loadAll 加载对象中全部的延迟加载属性  
+将加载得到的嵌套对象设置到外层对象中
+
+org.apache.ibatis.executor.loader.ProxyFactory 创建代理对象  
+![ProxyFactory继承关系](./image/ProxyFactory继承关系.png)  
+CglibProxyFactory 使用内部类 EnhancedResultObjectProxyImpl(MethodInterceptor).createProxy创建对象，创建过程中intercept会
+根据当前调用的方法名称，决定是否触发对延迟加载的属性进行加载  
+
+
+
+
+
 
 
 
