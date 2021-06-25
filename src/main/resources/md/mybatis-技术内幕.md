@@ -490,17 +490,35 @@ loadAll 加载对象中全部的延迟加载属性
 将加载得到的嵌套对象设置到外层对象中
 
 org.apache.ibatis.executor.loader.ProxyFactory 创建代理对象  
-![ProxyFactory继承关系](./image/ProxyFactory继承关系.png)  
-CglibProxyFactory 使用内部类 EnhancedResultObjectProxyImpl(MethodInterceptor).createProxy创建对象，创建过程中intercept会
-根据当前调用的方法名称，决定是否触发对延迟加载的属性进行加载  
+![ProxyFactory继承关系](./image/ProxyFactory继承关系.png)
 
+1. CglibProxyFactory 使用内部类 EnhancedResultObjectProxyImpl(MethodInterceptor).createProxy创建对象，创建过程中intercept会
+   根据当前调用的方法名称，决定是否触发对延迟加载的属性进行加载；实现WriteReplaceInterface接口
+2. JavassistProxyFactory 实现MethodHandler接口
 
+DefaultResultSetHandler 中的延迟加载 和 嵌套查询  
+createParameterizedResultObject 获取<resultMap>中配置的构造函数和参数值，选择合适的构造函数创建结果对象  
+如果某个构造函数中是通过嵌套查询获取的，则需要通过getNestedQueryConstructorValue创建该参数值  
+在创建构造函数的参数时涉及的嵌套查询，无论配置如何，都不会延迟加载；在其他属性的嵌套查询中，才会有延迟加载的处理逻辑
 
+多结果集处理  
+游标  
+输出类型的参数(存储过程)
 
-
-
-
-
+KeyGenerator  
+获取插入记录时产生的自增主键  
+oarcle, db2 等是通过sequence实现自增的，在执行insert之前必须明确指定主键的值  
+mysql, postgresql 等在执行sql时，可以不指定主键，在插入过程中由数据库自动生成自增主键    
+![KeyGenerator继承关系](./image/KeyGenerator继承关系.png)  
+```text
+useGeneratedKeys:
+（仅适用于insert和update）这会令MyBatis使用JDBC的getGeneratedKeys方法来取出由数据库内部生成的主键
+（比如：像MySQL和SQL Server这样的关系型数据库管理系统的自动递增字段），默认值：false。
+processBefore // 在执行insert之前执行，设置属性order="BEFORE"
+processAfter // 在执行insert之后执行，设置属性order="AFTER"
+```
+1. Jdbc3KeyGenerator  
+  用于**取回**数据库生成的自增id，只实现了processAfter方法
 
 
 
