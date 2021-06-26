@@ -509,7 +509,8 @@ KeyGenerator
 获取插入记录时产生的自增主键  
 oarcle, db2 等是通过sequence实现自增的，在执行insert之前必须明确指定主键的值  
 mysql, postgresql 等在执行sql时，可以不指定主键，在插入过程中由数据库自动生成自增主键    
-![KeyGenerator继承关系](./image/KeyGenerator继承关系.png)  
+![KeyGenerator继承关系](./image/KeyGenerator继承关系.png)
+
 ```text
 useGeneratedKeys:
 （仅适用于insert和update）这会令MyBatis使用JDBC的getGeneratedKeys方法来取出由数据库内部生成的主键
@@ -517,10 +518,26 @@ useGeneratedKeys:
 processBefore // 在执行insert之前执行，设置属性order="BEFORE"
 processAfter // 在执行insert之后执行，设置属性order="AFTER"
 ```
+
 1. Jdbc3KeyGenerator  
-  用于**取回**数据库生成的自增id，只实现了processAfter方法
+   用于**取回**数据库生成的自增id，只实现了processAfter方法
 
+2. SelectKeyGenerator MyBatis提供来**生成**主键，执行<selectKey>节点的sql语句，获取insert语句需要的主键并映射成对象，按照配置，将主键对象中对应的属性设置到用户参数中
 
+3.5 StatementHandler  
+功能：创建Statement，为sql语句绑定实参，执行select、insert等多种类型的sql语句，批量执行sql，将结果集映射成对象  
+![StatementHandler继承关系](./image/statementhandler-hierarchy.jpg)
+
+1. RoutingStatementHandler(**装饰器/策略**)：根据MappedStatement中指定的statementType字段，创建对应的StatementHandler接口实现
+2. BaseStatementHandler：提供参数绑定相关的方法(将传入的实参替换sql语句中的'?')，没有实现操作数据库的方法
+
+```text
+   ParameterHandler  
+   只有一个方法 setParameters，一个实现类DefaultParameterHandler
+   遍历BoundSql.parameterMappings集合中记录的ParameterMapping对象，根据其中记录的参数名称查找相应实参，然后与sql语句绑定
+```
+   
+3. SimpleStatementHandler：使用java.sql.Statement完成数据库相关操作，所有sql语句中不能存在占位符
 
 
 
