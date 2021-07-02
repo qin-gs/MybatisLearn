@@ -536,8 +536,37 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
    只有一个方法 setParameters，一个实现类DefaultParameterHandler
    遍历BoundSql.parameterMappings集合中记录的ParameterMapping对象，根据其中记录的参数名称查找相应实参，然后与sql语句绑定
 ```
+
+3. SimpleStatementHandler：使用java.sql.Statement完成数据库相关操作，所有sql语句中不能存在占位符  
+   通过JDBC Connection创建Statement对象，通过query完成数据库查询操作，通过ResultSetHandler将结果集映射成对象
+
+4. PreparedStatementHandler：使用java.sql.PreparedStatement对象完成数据库的相关操作
+5. CallableStatementHandler：使用java.sql.CallableStatement调用指定存储过程
+
+3.6 org.apache.ibatis.executor.Executor 接口(模板+装饰器)  
+定义操作数据库的基本方法  
+执行update, insert, delete类型的语句，批量执行sql，提交/回滚事务，查找缓存，关闭Executor对象等  
+![Executor继承关系](./image/Executor继承关系.png)  
+模板策略：一个算法分为多个步骤，这些步骤的执行次序在一个被成为'模板方法'的方法中定义，算法的每个步骤对应着一个方法，被成为基本方法。
+模板方法按照定义的顺序依次调用多个基本方法，完成整个流程。在模板方法的模板中，将模板方法的实现以及那些固定不变的基本方法的实现放在父类中， 不固定的基本方法在父类中只是抽象方法，真正的实现被延迟到子类中。
+
+1. BaseExecutor  
+   实现了大部分方法(四个未实现doUpdate, doQuery, doQueryCursor, doFlushStatement)，主要提供**缓存管理**和**事务管理**的基本功能  
+   一级缓存：会话级别的，默认开启，每创建一个SqlSession表示开启一次会话，生命周期与SqlSession相同(也就是SqlSession中封装的Executor生命周期相同)  
+   query方法：首先创建CacheKey对象，根据CacheKey对象查找以及缓存，如果命中缓存就返回缓存中记录的结果对象，如果没有命中就查询数据库获取结果集， 之后将结果集映射成结果对象保存到一级缓存中，同时返回结果对象。  
+   CacheKey(缓存中的key，可以添加多个对象(存入updateList)，共同决定两个key是否相同)  
+   加入的对象：MappedStatement的id，offset和limit，包含?的sql语句，用户传递的实参，Environment的id 五部分组成
+    1. 缓存查询到的结果对象
+    2. 嵌套查询时，如果一级缓存中缓存了嵌套查询的结果对象，则直接获取；如果一级缓存中记录嵌套查询的结果对象没有完全加载，通过DeferredLoad实现延迟加载
+   ```text
+    isCached 检测是否缓存的指定查询的结果对象
+    deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
+    ``` 
+   DeferredLoad(内部类)负责从localCache缓存中延迟加载结果对象
    
-3. SimpleStatementHandler：使用java.sql.Statement完成数据库相关操作，所有sql语句中不能存在占位符
+   
+
+
 
 
 
