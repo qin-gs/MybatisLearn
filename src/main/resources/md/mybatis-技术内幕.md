@@ -552,7 +552,7 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
 
 1. BaseExecutor  
    实现了大部分方法(四个未实现doUpdate, doQuery, doQueryCursor, doFlushStatement)，主要提供**缓存管理**和**事务管理**的基本功能  
-   一级缓存：会话级别的，默认开启，每创建一个SqlSession表示开启一次会话，生命周期与SqlSession相同(也就是SqlSession中封装的Executor生命周期相同)  
+   **一级缓存**：会话级别的，默认开启，每创建一个SqlSession表示开启一次会话，生命周期与SqlSession相同(也就是SqlSession中封装的Executor生命周期相同)  
    query方法：首先创建CacheKey对象，根据CacheKey对象查找以及缓存，如果命中缓存就返回缓存中记录的结果对象，如果没有命中就查询数据库获取结果集， 之后将结果集映射成结果对象保存到一级缓存中，同时返回结果对象。  
    CacheKey(缓存中的key，可以添加多个对象(存入updateList)，共同决定两个key是否相同)  
    加入的对象：MappedStatement的id，offset和limit，包含?的sql语句，用户传递的实参，Environment的id 五部分组成
@@ -563,8 +563,55 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
     deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
     ``` 
    DeferredLoad(内部类)负责从localCache缓存中延迟加载结果对象
+
+    ```text
+    DeferredLoad.canLoad方法负责检测缓存项是否完全到了缓存中
+        1. 检测缓存是否存在指定的结果对象
+        2. 检测是否为占位符
+    BaseExecutor.queryFromDatabase方法
+        1. 开始调用doQuery方法查询数据库之前，会先在localCache中添加占位符，
+        2. 完成数据库查询操作，返回结果对象
+        3. 删除占位符
+        3. 查询完成之后，将真正的结果放到一级缓存localCache中，返回数据
+    ```
+
+   最外层查询结束，所有的嵌套查询结束，相关缓存项也已经完全加载后触发DeferredLoad加载一级缓存中记录的嵌套查询的结果对象， 加载完成后清空(flushCache,
+   localCacheScope两个配置决定是否清空一级缓存)  
+   deferredLoads集合 update方法：执行insert, update, delete三类sql，调用doUpdate模板方法实现，调用之前清空缓存(因为执行sql之后一级缓存中的数据和数据库中的数据已经不一致了(
+   肮数据))  
+   **事务相关**：BatchExecutor可以缓存多条sql，然后等待合适的时机将多条sql一起发送到数据库执行(flushStatements方法会在commit/rollback方法之前被调用)  
+   commit/rollback方法：先清空一级缓存，再flushStatements方法，最后根据参数决定是否真正提交事务
+
+2. SimpleExecutor  
+   继承BaseExecutor，不提供批量处理sql语句功能，采用模板方法，只需要专注四个基本方法的实现  
+   query:
+    1. 获取Configuration配置对象
+    2. 创建StatementHandler对象，实际返回RoutingStatementHandler对象(根据MappedStatement.statementType选择具体的StatementHandler实现)
+    3. 完成Statement的创建和初始化，并处理占位符
+    4. 调用StatementHandler.query方法，执行sql，并通过ResultSetHandler完成结果集映射
+    5. 关闭Statement对象
+
+3. ReuseExecutor  
+   提供重用Statement功能，通过Map<sql语句, Statement>缓存使用过的Statement对象  
+   与SimpleExecutor不同的是prepareStatement方法；  
+   SimpleExecutor每次都会通过JDBC Connection重新创建Statement对象  
+   ReuseExecutor会尝试重用缓存的Statement对象
+    1. 获取sql语句
+    2. 检测是否已经缓存了相同模式的sql对应的Statement对象
+        1. 如果已经缓存了，就从Map中拿出来，并修改超时时间
+        2. 如果没有缓存，就获取数据库连接，创建新的Statement对象，放入Map中
+    3. 处理占位符
+
+   事务提交回滚连接关闭时，需要关闭缓存的Statement对象，在doFlushStatements中完成Statement对象的关闭  
+   每个Statement对象只能对应一个结果集，多次调用queryCursor方法执行同一条sql时，会复用同一个Statement对象，只有最后一个ResultSet可用  
+   // queryCursor方法返回的时Cursor对象，用户在迭代Cursor对象时，才会真正遍历结果集对象并进行映射操作，可能导致前面创建的Cursor对象中封装的结果集关闭  
+   // 完成结果集处理后，fetchNextObjectFromDatabase方法会调用DefaultCursor.close方法将其中封装的结果集关闭，同时关闭结果集对应的Statement对象  
+   // 会导致缓存的Statement对象关闭，后面继续使用会出现空指针异常  
+   ReuseExecutor.query方法，在select语句执行之后，会立刻将结果集映射成结果对象，然后关闭结果集，但是不会关闭Statement对象  
    
-   
+4. BatchExecutor  
+批量处理多条sql语句  
+
 
 
 
