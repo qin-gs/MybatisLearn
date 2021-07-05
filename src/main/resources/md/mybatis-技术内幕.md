@@ -607,13 +607,46 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
    // queryCursor方法返回的时Cursor对象，用户在迭代Cursor对象时，才会真正遍历结果集对象并进行映射操作，可能导致前面创建的Cursor对象中封装的结果集关闭  
    // 完成结果集处理后，fetchNextObjectFromDatabase方法会调用DefaultCursor.close方法将其中封装的结果集关闭，同时关闭结果集对应的Statement对象  
    // 会导致缓存的Statement对象关闭，后面继续使用会出现空指针异常  
-   ReuseExecutor.query方法，在select语句执行之后，会立刻将结果集映射成结果对象，然后关闭结果集，但是不会关闭Statement对象  
-   
+   ReuseExecutor.query方法，在select语句执行之后，会立刻将结果集映射成结果对象，然后关闭结果集，但是不会关闭Statement对象
+
 4. BatchExecutor  
-批量处理多条sql语句  
+   批量处理多条sql语句，只支持insert, update, delete类型，不支持select
 
+```text
+List<Statement> 缓存多个Statement对象，每个Statement对象有多条sql  
+List<BatchResult> 记录每个Statement对象执行批处理的结果  
+String sql 记录当前执行的sql
+MappedStatement 记录当前执行的MappedStatement对象(表示映射文件中定义的sql节点)
+```
 
+doUpdate  
+如果当前执行的sql模式与上次执行的sql模式相同并且对应的MappedStatement相同，获取集合中的最后一个Statement，绑定实参，处理占位符，查找对应的BatchResult对象，记录用户传入的实参  
+如果不相同，去创建新的Statement对象，绑定实参，处理占位符，更新当前sql和当前MappedStatement，将创建的Statement对象放入集合，添加新的BatchResult对象  
+将连续添加的，相同模式的sql语句放到同一个Statement/PreparedStatement对象中，减少编译的次数  
+doFlushStatements  
+批量处理sql，遍历所有的Statement对象一次执行，并处理返回值(影响的行数)，保存结果集对象，关闭所有的Statement  
+doQuery doQueryCursor  
+与SimpleExecutor类似，就是会在调用前flushStatements，执行缓存的sql来确保从数据库中拿到最新的数据
 
+5. CachingExecutor  
+   一个Executor的装饰器，提供二级缓存功能    
+   二级缓存的生命周期与应用程序的生命周期相同
 
+```text
+配置
+mybatis-config.xml  ->  cacheEnabled=true 总开关
+<cache> <cache-ref>  添加以后默认会创建Cache对象(默认是PerpetualCache)
+<select useCache=true>  表示查询的结果是否保存到二级缓存中  
+```
+
+CachingExecutor中依赖的两个组件
+
+1. TransactionalCache  
+   继承Cache接口，用来保存在某个SqlSession的某个事务中需要向某个二级缓存中添加的缓存数据  
+   将需要放入二级缓存的数据暂时存放在集合中，等事务提交时才会真正放进去
+2. TransactionalCacheManager  
+   用来管理CachingExecutor使用的二级缓存对象，定义了一个HashMap<Cache, TransactionalCache>  
+   key时对应的CacheExecutor使用的二级缓存对象，value是相应的TransactionalCache对象(封装对应的二级缓存对象，就是key)  
+   clear, putObject, getObject 调用二级缓存对应的TransactionalCache对象的对应方法
 
 
