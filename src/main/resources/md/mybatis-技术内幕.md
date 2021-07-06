@@ -647,6 +647,41 @@ CachingExecutor中依赖的两个组件
 2. TransactionalCacheManager  
    用来管理CachingExecutor使用的二级缓存对象，定义了一个HashMap<Cache, TransactionalCache>  
    key时对应的CacheExecutor使用的二级缓存对象，value是相应的TransactionalCache对象(封装对应的二级缓存对象，就是key)  
-   clear, putObject, getObject 调用二级缓存对应的TransactionalCache对象的对应方法
+   clear, putObject, getObject 调用二级缓存对应的TransactionalCache对象的对应方法  
+   ![二级缓存相关的类](./image/二级缓存相关的类.png)
+
+query  
+执行查询操作
+
+1. 获取BoundSql，创建查询语句对应的CacheKey对象
+2. 检测是否开启二级缓存，没有开启就直接调用底层Executor对象查询数据库；开启了继续下面的步骤
+3. 检测查询操作是否有输出类型(存储过程)的参数，有的话报错
+4. 调用TransactionalCacheManager.getObject 查询二级缓存，如果找到了直接返回，
+5. 如果没找到，调用底层Executor对象的query方法，先查询一级缓存，如果未命中去查询数据库；
+6. 将得到的结果放入缓存集合中保存
+
+commit/rollback  
+都会先调用底层executor的方法来提交/回滚事务，然后遍历所有相关的TransactionalCache对象来提交/回滚事务
+
+不同的CacheExecutor由不同的线程操作  
+CacheBuilder.build方法会调用CacheBuilder.setStandardDecorators为PerpetualCache类型的Cache对象添加装饰器，这个过程中会添加SynchronizedCache这个装饰器，来保证二级缓存的线程安全  
+事务提交时才会将entriesToAddOnCommit集合中缓存的数据写入二级缓存，用来避免`脏读`  
+TransactionalCache.entriesMissedInCache集合的作用  
+与BlockingCache相关，查询二级缓存会调用getObject方法，如果二级缓存中没有对应数据，就去查询数据库最后将结果putObject放入二级缓存  
+如果用了BlockingCache，getObject会有加锁过程，putObject会有解锁过程，如果两者之间出现异常，可能会无法释放锁，导致缓存项无法被其他SqlSession使用  
+因此使用该集合记录未命名的CacheKey，也就是加了锁的缓存项，`entriesToAddOnCommit`是`entriesMissedInCache`集合的子集，也就是正常解锁的缓存项  
+对于未正常结束的缓存项，会在事务提交或回滚时进行解锁操作
+
+6. 接口层  
+   SqlSession 接口层的主要组成部分，对外提供MyBatis常用API  
+   ![SqlSession继承关系](./image/SqlSession继承关系.png)
+
+   SqlSessionFactory负责创建SqlSession对象，其中包含多个openSession方法的重载，可以通过参数指定事务的隔离级别、使用的Executor类型、是否自动提交事务等配置  
+   SqlSession中定义常用的数据库操作和事务相关操作，对每种类型(select, update, delete, insert)的操作都提供多种重载
+
+   策略：定义封装一系列算法，互相之间可以互相替换(开放封闭原则)  
+   
+
+
 
 
