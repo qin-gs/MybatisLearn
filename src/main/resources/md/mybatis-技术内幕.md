@@ -679,7 +679,40 @@ TransactionalCache.entriesMissedInCache集合的作用
    SqlSessionFactory负责创建SqlSession对象，其中包含多个openSession方法的重载，可以通过参数指定事务的隔离级别、使用的Executor类型、是否自动提交事务等配置  
    SqlSession中定义常用的数据库操作和事务相关操作，对每种类型(select, update, delete, insert)的操作都提供多种重载
 
-   策略：定义封装一系列算法，互相之间可以互相替换(开放封闭原则)  
+   策略：定义封装一系列算法，互相之间可以互相替换(开放封闭原则)    
+   DefaultSqlSession 是调用者，将数据库相关相关的操作封装到Executor接口中实现，通过executor字段选择不同的Executor实现  
+   select*方法最终调用query(MappedStatement, Object, RowBounds, ResultHandler)方法完成数据库查询操作  
+   各自对结果进行调整：
+    1. selectOne 从结果对象集合中获取第一个元素返回
+    2. selectMap 方法将List类型的结果对象集合转换成Map类型集合返回
+    3. select 方法将结果对象集合交由用户指定的ResultHandler对象处理，且没有返回值
+    4. selectList 方法直接返回结果对象集合
+
+   insert*, update*, delete*方法最终是通过DefaultSqlSession.update(String, Object) 方法实现  
+   首先将dirty字段设为true(有脏数据)，然后调用Executor.update方法完成数据库修改操作  
+   commit, rollback, close 方法调用Executor中相应的方法完成(涉及清空缓存操作，最后将dirty字段设为false)
+
+   DefaultSqlSessionFactory (implenents SqlSessionFactory)  
+   提供两者创建DefaultSqlSession的方法
+    1. 通过数据源获取数据库连接，并创建Executor对象以及DefaultSqlSession对象，使用完立刻关闭(获取mybatis-config.xml中配置的Environment对象)
+    2. 用户提供数据库连接对象，然后使用该对象创建Executor对象以及DefaultSqlSession对象
+
+   SqlSessionManager (implements SqlSession, SqlSessionFactory)  
+   同时提供 SqlSessionFactory创建SqlSession对象 和 SqlSession操纵数据库功能
+   ```text
+        private final SqlSessionFactory sqlSessionFactory; // 工厂对象
+        private ThreadLocal<SqlSession> localSqlSession = new ThreadLocal<SqlSession>(); // 记录一个与当前线程绑定的SqlSession对象
+        private final SqlSession sqlSessionProxy; // 上面记录的SqlSession的代理对象，在SqlSessionManager中使用JDK动态代理创建代理对象
+   ```
+   提供两种模式：
+    1. 与DefaultSqlSessionFactory相同，统一线程每次通过SqlSessionManager对象访问数据库时，都会创建新的DefaultSession对象完成数据库操作
+    2. SqlSessionManager通过localSqlSession这个ThreadLocal这个变量，记录与当前线程绑定的SqlSession对象，当前线程循环使用，避免同一线程多次创建SqlSession对象
+
+   SqlSessionManager.openSession方法使用底层封装的SqlSessionFactory对象的openSession方法来创建SqlSession对象  
+   SqlSessionManager.select*/update等方法直接调用sqlSessionProxy字段记录的SqlSession代理对象的相应方法实现的  
+   
+   
+
    
 
 
