@@ -709,11 +709,54 @@ TransactionalCache.entriesMissedInCache集合的作用
     2. SqlSessionManager通过localSqlSession这个ThreadLocal这个变量，记录与当前线程绑定的SqlSession对象，当前线程循环使用，避免同一线程多次创建SqlSession对象
 
    SqlSessionManager.openSession方法使用底层封装的SqlSessionFactory对象的openSession方法来创建SqlSession对象  
-   SqlSessionManager.select*/update等方法直接调用sqlSessionProxy字段记录的SqlSession代理对象的相应方法实现的  
-   
-   
+   SqlSessionManager.select*/update等方法直接调用sqlSessionProxy字段记录的SqlSession代理对象的相应方法实现的
 
-   
+#### 插件
+
+1. 插件
+
+采用 责任链 和 JDK动态代理 的模式，通过拦截器Interceptor实现  
+可拦截方法：
+
+```text
+这四个都是接口，所以可以用JDK动态代理为其实现类创建代理对象
+Executor: update, query, flushStatements, commit, rollback, getTransaction, close, isClosed
+ParameterHandler: getParameterObject, setParameters
+ResultSetHandler: handleResultSets, handleOutputParameters
+StatementHandler: prepare, parameterize, batch, update, query
+这四种对象都是通过Configuration.new*方法创建的
+如果配置了拦截器，会通过InterceptorChain.pluginAll方法为目标对象用JDK动态代理创建代理对象
+```
+
+org.apache.ibatis.plugin.Interceptor
+
+```text
+interceptor: 具体的拦截逻辑
+plugin: 是否触发上面的拦截逻辑
+setProperties: 根据配置初始化Interceptor对象
+```
+
+@Intercepts: 指定一个@Signature注解列表，每个注解中都标识了该插件需要拦截的方法信息  
+@Signature: 用来确定唯一的方法签名(type 需要拦截的类型; method 需要拦截的对象; args 被拦截方法的参数列表)
+
+MyBatis初始化时，会解析xml配置文件 或 注解 ，将拦截器对象进行初始化并保存到Configuration.interceptorChain字段中
+
+```text
+Plugin.wrap 静态方法可以用来创建代理对象  
+Plugin(implement InvocationHandler)中封装了 目标对象，Interceptor对象，记录@Signature注解中的信息
+invoke方法会获取当前方法所在类或接口中，可被Interceptor拦截的方法
+如果当前调用的方法需要被拦截，就调用Interceptor.intercept方法进行拦截
+如果当前调用的方法不能被拦截，直接调用目标对象相应的方法
+
+Interceptor.intercept(Invocation)
+Invocation对象封装了 目标对象，目标方法，调用目标方法的参数，proceed方法调用目标方法
+```
+
+应用场景  
+分页插件
+MyBatis自带的RowBounds分页方法，通过循环调用ResultSet.next方法定位到指定的行  
+插件：拦截Executor.query方法，同RowBounds参数获取所需记录的起始位置，根据不同的数据库(策略)给BoundSql参数添加limit等片段  
+
 
 
 
