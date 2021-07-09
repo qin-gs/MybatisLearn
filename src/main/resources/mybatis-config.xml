@@ -46,6 +46,13 @@
         <plugin interceptor="com.mybatis.learn.plugin.ExecutorPlugin">
             <property name="someProperty" value="100"/>
         </plugin>
+        <plugin interceptor="com.mybatis.learn.plugin.ExamplePlugin">
+            <property name="testProp" value="200"/>
+        </plugin>
+        <plugin interceptor="com.mybatis.learn.plugin.PageInterceptor">
+            <property name="jdbc.dbType" value="mysql"/>
+            <property name="Dialect.oracle" value=""/>
+        </plugin>
     </plugins>
 
     <environments default="development">

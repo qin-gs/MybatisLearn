@@ -1,5 +1,6 @@
 package com.mybatis.learn.plugin;
 
+import com.mybatis.learn.plugin.dialect.Dialect;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -10,7 +11,6 @@ import org.apache.ibatis.plugin.Plugin;
 import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
-import org.hibernate.dialect.Dialect;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,12 +53,12 @@ public class PageInterceptor implements Interceptor {
 	}
 
 	/**
-	 * 处理完拦截到的sql语句之后，根据当前的sqk语句创建新的MappedStatement对象，更新到Invocation对象记录的参数列表中
+	 * 处理完拦截到的sql语句之后，根据当前的sql语句创建新的MappedStatement对象，更新到Invocation对象记录的参数列表中
 	 */
-	@org.jetbrains.annotations.NotNull
 	private MappedStatement createMappedStatement(MappedStatement ms, BoundSql boundSql, String sql) {
-		BoundSql newBoundSql = createBoundSql(ms, boundSql, sql);
-		return createMappedStatement(ms, new BoundSqlSource(newBoundSql));
+		// BoundSql newBoundSql = createBoundSql(ms, boundSql, sql);
+		// return createMappedStatement(ms, new BoundSqlSource(newBoundSql));
+		return null;
 	}
 
 	@Override
@@ -79,7 +79,7 @@ public class PageInterceptor implements Interceptor {
 		}
 		String dialectClass = result.get(dbName);
 		try {
-			Dialect dialect = Class.forName(dialectClass).newInstance();
+			Dialect dialect = (Dialect) Class.forName(dialectClass).newInstance();
 			this.setDialect(dialect);
 		} catch (Exception e) {
 			e.printStackTrace();
