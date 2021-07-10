@@ -753,9 +753,35 @@ Invocation对象封装了 目标对象，目标方法，调用目标方法的参
 ```
 
 应用场景  
-分页插件
-MyBatis自带的RowBounds分页方法，通过循环调用ResultSet.next方法定位到指定的行  
-插件：拦截Executor.query方法，同RowBounds参数获取所需记录的起始位置，根据不同的数据库(策略)给BoundSql参数添加limit等片段  
+分页插件 MyBatis自带的RowBounds分页方法，通过循环调用ResultSet.next方法定位到指定的行  
+插件：拦截Executor.query方法，同RowBounds参数获取所需记录的起始位置，根据不同的数据库(策略)给BoundSql参数添加limit等片段
+
+MyBatis 和 Spring 集成  
+mybatis-spring-2.0.6.jar  
+MyBatis初始化时，SqlSessionFactoryBuilder通过XMLConfigBuilder等对象读取mybatis-config.xml配置文件和映射配置信息，得到Configuration对象  
+与Spring集成之后，SqlSessionFactory对象通过SqlSessionFactoryBean对象(如果用xml配置，需要指定数据源，配置mybatis-config.xml文件位置)创建
+
+如果配置文件中没有明确为SqlSessionFactoryBean指定transactionFactory属性，就使用默认的SpringManagedTransactionFactory  
+该类的newTransaction方法返回SpringManagedTransaction
+
+SqlSessionTemplate 核心  
+实现了SqlSession接口，用来代理DefaultSqlSession功能  
+可以用来完成指定的数据库操作，线程安全，可以在dao层共享  
+通过调用sqlSessionProxy(用Jdk动态代理生成的代理对象)的相应方法实现SqlSession接口的所有方法  
+SqlSessionInterceptor 接口 会检测事务是否由Spring管理决定是否提交事务  
+SqlSessionUtils.getSession方法，会尝试从Spring事务管理器中获取SqlSession对象  
+获取成功就直接返回，否则通过SqlSessionFactory创建SqlSession对象然后交给Spring的事务管理器  
+
+SqlSessionDaoSupport  
+DaoSupport 用来辅助开发人员编写dao层代码  
+通过继承该类方便获取SqlSessionTemplate对象，完成数据库访问操作  
+
+MapperFactoryBean MapperScannerConfigurer  
+MapperFactoryBean 是一个动态代理类，直接将Mapper接口注入到Service层的Bean中  
+
+new SQL{{}} 动态生成sql语句  
+用户可自定义sql语言驱动器(实现 org.apache.ibatis.scripting.LanguageDriver接口，注册进去)
+@Lang(MyLanguageDriver.class) | <select id="" lang="myLanguage"> 对特殊语句指定特定的语言驱动器  
 
 
 
