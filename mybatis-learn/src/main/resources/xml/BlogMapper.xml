@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mybatis.learn.mapper.BlogMapper">
+
+    <cache eviction="LRU" flushInterval="6000" size="512" readOnly="true"/>
+
+    <sql id="columns">
+        ${alias}.id, ${alias}.name
+    </sql>
+    <select id="testColumn" resultType="map">
+        select
+        <include refid="columns">
+            <property name="alias" value="v1"/>
+        </include>
+        <include refid="columns">
+            <property name="alias" value="v2"/>
+        </include>
+        from blog
+    </select>
+
+    <sql id="someTable"> ${prefix}Table </sql>
+    <sql id="someInclude">
+        from
+        <include refid="${include_target}"/>
+    </sql>
+    <select id="testSql" resultType="map">
+        select *
+        <include refid="someInclude">
+            <property name="prefix" value="Some"/>
+            <property name="include_target" value="someTable"/>
+        </include>
+    </select>
+
+    <resultMap id="blogMap" type="blog" autoMapping="true">
+        <id column="id" property="id"/>
+        <result column="time" property="time" javaType="java.util.Date" jdbcType="VARCHAR"
+                typeHandler="com.mybatis.learn.handler.DateStringTypeHandler"/>
+        <association property="author" column="id" select="selectUserByBlogId"/>
+        <collection property="comments" column="id" javaType="ArrayList" ofType="comment"
+                    select="selectCommentByBlogId" autoMapping="true"/>
+        <!--  鉴别器：类似于switch      -->
+        <!--        <discriminator javaType="int" column="age">-->
+        <!--            <case value="1" resultMap="user"></case>-->
+        <!--            <case value="2" resultMap="blog"></case>-->
+        <!--        </discriminator>-->
+    </resultMap>
+
+    <!--    <select id="getBlogById" resultMap="blogMap">-->
+    <!--        select *-->
+    <!--        from blog-->
+    <!--        where id = #{id}-->
+    <!--    </select>-->
+
+    <select id="selectUserByBlogId" resultType="user">
+        select *
+        from user
+        where blogid = #{blogid};
+    </select>
+
+    <select id="selectCommentByBlogId" resultType="comment">
+        select *
+        from comment
+        where blogid = #{blogid}
+    </select>
+
+    <select id="selectUserById" resultType="user">
+        select *
+        from user
+        where id = #{id}
+    </select>
+</mapper>

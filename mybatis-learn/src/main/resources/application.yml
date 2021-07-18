@@ -1,0 +1,26 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/mybatis_learn?useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT-8
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    show-sql: true
+
+mybatis:
+  mapper-locations: classpath:xml/*.xml
+  type-aliases-package: com.mybatis.learn.bean
+  configuration:
+    map-underscore-to-camel-case: true
+  type-handlers-package: com.mybatis.learn.handler
+
+logging:
+  config: classpath:log4j.properties
+  level:
+    com.mybatis.learn.mapper: debug
+
+
+

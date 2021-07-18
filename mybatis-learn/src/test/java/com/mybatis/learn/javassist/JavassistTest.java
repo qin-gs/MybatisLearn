@@ -1,0 +1,21 @@
+package com.mybatis.learn.javassist;
+
+public class JavassistTest {
+	private String prop = "MyName";
+
+	public void getProp(String var1) {
+		this.prop = var1;
+	}
+
+	public String getProp() {
+		return this.prop;
+	}
+
+	public JavassistTest() {
+		this.prop = "MyName";
+	}
+
+	public void execute() {
+		System.out.println("execute():" + this.prop);
+	}
+}
