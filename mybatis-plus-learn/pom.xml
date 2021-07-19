@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.qin</groupId>
-    <artifactId>learn</artifactId>
+    <artifactId>mybatis-plus-learn</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>mybatis-plus-learn</name>
     <description>Demo project for Spring Boot</description>
@@ -30,6 +30,7 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.4.3</version>
         </dependency>
 
         <dependency>
