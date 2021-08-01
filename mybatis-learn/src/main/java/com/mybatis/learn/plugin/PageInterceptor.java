@@ -16,9 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-@Intercepts({@Signature(type = Executor.class, method = "query", args = {
-		MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class
-})})
+// @Intercepts({@Signature(type = Executor.class, method = "query", args = {
+// 		MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class
+// })})
 public class PageInterceptor implements Interceptor {
 
 	// 记录MappedStatement对象在参数列表中的索引位置

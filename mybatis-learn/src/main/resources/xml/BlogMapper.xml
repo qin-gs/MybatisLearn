@@ -9,6 +9,7 @@
     <sql id="columns">
         ${alias}.id, ${alias}.name
     </sql>
+
     <select id="testColumn" resultType="map">
         select
         <include refid="columns">
@@ -70,4 +71,13 @@
         from user
         where id = #{id}
     </select>
+
+    <update id="updateBlogTitleById">
+        update blog
+        <set>
+            <if test="title != null">title = #{title}</if>
+        </set>
+        where id = #{id}
+    </update>
+
 </mapper>

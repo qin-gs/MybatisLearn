@@ -2,6 +2,9 @@ package com.mybatis.learn.builder;
 
 import lombok.Data;
 
+/**
+ * 最终构造完成的对象
+ */
 @Data
 public class Product {
 	private String partA;

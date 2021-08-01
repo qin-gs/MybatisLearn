@@ -1,4 +1,4 @@
-### mybatis技术内幕
+## mybatis技术内幕
 
 1. **接口层** sqlSession
 2. **核心处理层** 配置解析，参数映射，sql解析，sql执行，结果集映射，插件
@@ -6,7 +6,7 @@
 
 ![mybatis语句执行过程](./image/mybatis语句执行过程.png)
 
-#### 基础支持层
+### 基础支持层
 
 2.1 解析器模块  
 相关类(org.mybatis.ibatis.parsing)：XPathParser XNode TokenHandler PropertyParser  
@@ -310,9 +310,11 @@ CacheKey 缓存中的key
 3. 查询所使用的sql语句，boundSql.getSql()返回的sql语句，可能包含?占位符
 4. 用户传递给上述sql的实际参数值
 
-#### 核心处理层
+### 3. 核心处理层
 
-3.1 MyBatis初始化
+#### 3.1 MyBatis初始化
+
+mybatis的初始化工作
 
 1. 读取 mybatis-config.xml 和 XxxMapper.xml配置文件
 2. 加载配置文件中指定的类，处理类中的注解，创建一些配置对象
@@ -321,7 +323,7 @@ CacheKey 缓存中的key
 
 BaseBuilder 接口 定义构造者构造产品对象的各部分行为  
 ![BaseBuilder继承关系](./image/BaseBuilder继承关系.png)  
-初始化入口 SqlSessionFactoryBuilder.build()
+初始化入口 SqlSessionFactoryBuilder.build() 创建 XMLConfigBuilder 解析配置文件  
 
 org.apache.ibatis.session.Configuration 初始化过程中创建且全局唯一，MyBatis初始化的核心对象  
 XMLConfigBuilder 负责解析mybatis-config.xml配置文件
@@ -711,7 +713,7 @@ TransactionalCache.entriesMissedInCache集合的作用
    SqlSessionManager.openSession方法使用底层封装的SqlSessionFactory对象的openSession方法来创建SqlSession对象  
    SqlSessionManager.select*/update等方法直接调用sqlSessionProxy字段记录的SqlSession代理对象的相应方法实现的
 
-#### 插件
+### 插件
 
 1. 插件
 
@@ -770,14 +772,14 @@ SqlSessionTemplate 核心
 通过调用sqlSessionProxy(用Jdk动态代理生成的代理对象)的相应方法实现SqlSession接口的所有方法  
 SqlSessionInterceptor 接口 会检测事务是否由Spring管理决定是否提交事务  
 SqlSessionUtils.getSession方法，会尝试从Spring事务管理器中获取SqlSession对象  
-获取成功就直接返回，否则通过SqlSessionFactory创建SqlSession对象然后交给Spring的事务管理器  
+获取成功就直接返回，否则通过SqlSessionFactory创建SqlSession对象然后交给Spring的事务管理器
 
 SqlSessionDaoSupport  
 DaoSupport 用来辅助开发人员编写dao层代码  
-通过继承该类方便获取SqlSessionTemplate对象，完成数据库访问操作  
+通过继承该类方便获取SqlSessionTemplate对象，完成数据库访问操作
 
 MapperFactoryBean MapperScannerConfigurer  
-MapperFactoryBean 是一个动态代理类，直接将Mapper接口注入到Service层的Bean中  
+MapperFactoryBean 是一个动态代理类，直接将Mapper接口注入到Service层的Bean中
 
 new SQL{{}} 动态生成sql语句  
 用户可自定义sql语言驱动器(实现 org.apache.ibatis.scripting.LanguageDriver接口，注册进去)

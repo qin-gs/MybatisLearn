@@ -13,8 +13,9 @@ sqlSession 和 Executor 是一对一的关系
 2. 辅助api: 提交关闭执行器，批处理刷新  
    ![executor继承关系](./image/executor-hierarchy.jpg)
 
-BaseExecutor (公共操作 一级缓存 获取连接 query update)  
+BaseExecutor (公共操作 一级缓存 获取连接 (query update 调用(doQuery, doUpdate子类实现)))  
 CachingExecutor (二级缓存 装饰器delegate)  
+
 SimpleExecutor 简单执行器 (实现doQuery, doUpdate)  
 ReuseExecutor 可重用执行器  
 BatchExecutor 批处理执行器 只针对修改操作，需要手动刷新
@@ -39,9 +40,9 @@ BatchExecutor 批处理执行器 只针对修改操作，需要手动刷新
 1. 没有手动清空 提交 回滚 sqlSession.clearCache();
 2. 未调用flushCache=true的查询
 3. 未执行Update(数据一致性问题)
-4. 缓存作用于不是Statement(Configuration里面的localCacheScope (Session, Statement(作用于嵌套查询，子查询)))
+4. 缓存作用域不是Statement(Configuration里面的localCacheScope (Session, Statement(作用于嵌套查询，子查询)))
 
-Mapper ->  SqlSession ->  BaseExecutor ->  StatementHandler
+Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 
 | 动态代理接口 | 会话模板 | 会话拦截器 | 会话工厂 |  
 | --- | --- | ---- | --- |

@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.*;
 import java.util.List;
 import java.util.Map;
 
-@Mapper
-@CacheNamespace
+// @Mapper
+// @CacheNamespace
 public interface BlogMapper {
 
 	@Select("select * from blog where id=#{id}")
@@ -42,4 +42,6 @@ public interface BlogMapper {
 			" #{blog.time, typeHandler=com.mybatis.learn.handler.DateStringTypeHandler})")
 	// @SelectKey(statement = "call identity()", keyProperty = "id", before = true, resultType = String.class)
 	int insertBlog(@Param("blog") Blog blog);
+
+	int updateBlogTitleById(@Param("id")String id, @Param("title")String title);
 }
