@@ -1,11 +1,11 @@
-### mybatis执行器
+#### mybatis执行器
 
 **SqlSession**(门面):
 
 1. 基本api 增删查改
 2. 辅助api 提交关闭会话
 
-**Executor**：
+####Executor
 
 sqlSession 和 Executor 是一对一的关系
 
@@ -14,7 +14,7 @@ sqlSession 和 Executor 是一对一的关系
    ![executor继承关系](./image/executor-hierarchy.jpg)
 
 BaseExecutor (公共操作 一级缓存 获取连接 (query update 调用(doQuery, doUpdate子类实现)))  
-CachingExecutor (二级缓存 装饰器delegate)  
+CachingExecutor (二级缓存 装饰器delegate)
 
 SimpleExecutor 简单执行器 (实现doQuery, doUpdate)  
 ReuseExecutor 可重用执行器  
@@ -22,7 +22,7 @@ BatchExecutor 批处理执行器 只针对修改操作，需要手动刷新
 
 装饰器模式(在不改变原有类结构和继承的情况下，通过包装原对象去扩展一个新功能)
 
-**一级缓存命中场景**  
+#### 一级缓存
 作用域为session  
 一级缓存：BaseExecutor  
 二级缓存：CachingExecutor
@@ -48,8 +48,14 @@ Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 | --- | --- | ---- | --- |
 |Mapper | SqlSessionTemplate | SqlSessionInterceptor | SqlSessionFactory |
 
-**二级缓存**
-应用级缓存
+一级缓存：
+
+1. 会话相关
+2. 参数条件相关
+3. 修改提交会清空缓存
+
+#### 二级缓存
+应用级缓存，可以跨线程使用
 ****
 
 1. 存储位置
@@ -61,7 +67,7 @@ Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 
 命中场景
 
-1. 会话提交后
+1. 会话提交后(autoCommit=true不行，必须commit或close)
 2. sql语句，参数相同
 3. 相同的Statement
 4. RowBounds相同
@@ -72,9 +78,11 @@ Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 | --- | --- |
 | cacheEnable| 全局缓存开关，默认为true |
 | useCache | 当前statement缓存开关，默认为true|
-| flushCache | 清除当前缓存空间： 修改true，查询false|
+| flushCache | 清除当前缓存空间： 修改true，查询false，**所有对缓存的变更只有在提交之后**|
 | <cache> @CacheNameSpace| 声明缓存空间 |
 | <cache-ref> @CacheNameSpaceRef | 引用缓存空间(xml+注解) |
+
+xml 和 java类 中的缓存不是同一个命名空间，必须使用<cache namespace="" />
 
 提交之后才能命中缓存  
 会话直接是互相隔离的，缓存导致数据可见，不提交就放入缓存可能会导致脏读

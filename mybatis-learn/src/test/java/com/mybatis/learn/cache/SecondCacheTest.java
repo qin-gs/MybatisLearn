@@ -18,7 +18,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.sql.SQLException;
 
-@SpringBootTest
+// @SpringBootTest
 @RunWith(SpringRunner.class)
 public class SecondCacheTest {
 
@@ -34,6 +34,7 @@ public class SecondCacheTest {
 
 	@Test
 	public void cacheTest() {
+		// Cache Hit Ratio [com.mybatis.learn.mapper.BlogMapper]: 1.0
 		Cache cache = configuration.getCache("com.mybatis.learn.mapper.BlogMapper");
 		Blog blog = new Blog();
 		cache.putObject("key", blog);

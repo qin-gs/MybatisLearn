@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.*;
 import java.util.List;
 import java.util.Map;
 
-// @Mapper
+@Mapper
 // @CacheNamespace
 public interface BlogMapper {
 
