@@ -528,7 +528,7 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
 
 3.5 StatementHandler  
 功能：创建Statement，为sql语句绑定实参，执行select、insert等多种类型的sql语句，批量执行sql，将结果集映射成对象  
-![StatementHandler继承关系](./image/statementhandler-hierarchy.jpg)
+![StatementHandler继承关系](./image/statementhandler-继承关系.jpg)
 
 1. RoutingStatementHandler(**装饰器/策略**)：根据MappedStatement中指定的statementType字段，创建对应的StatementHandler接口实现
 2. BaseStatementHandler：提供参数绑定相关的方法(将传入的实参替换sql语句中的'?')，没有实现操作数据库的方法

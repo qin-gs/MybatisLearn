@@ -5,7 +5,7 @@
 1. 基本api 增删查改
 2. 辅助api 提交关闭会话
 
-####Executor
+#### Executor
 
 sqlSession 和 Executor 是一对一的关系
 
@@ -23,6 +23,7 @@ BatchExecutor 批处理执行器 只针对修改操作，需要手动刷新
 装饰器模式(在不改变原有类结构和继承的情况下，通过包装原对象去扩展一个新功能)
 
 #### 一级缓存
+
 作用域为session  
 一级缓存：BaseExecutor  
 二级缓存：CachingExecutor
@@ -55,6 +56,7 @@ Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 3. 修改提交会清空缓存
 
 #### 二级缓存
+
 应用级缓存，可以跨线程使用
 ****
 
@@ -85,11 +87,13 @@ Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 xml 和 java类 中的缓存不是同一个命名空间，必须使用<cache namespace="" />
 
 提交之后才能命中缓存  
-会话直接是互相隔离的，缓存导致数据可见，不提交就放入缓存可能会导致脏读
+会话直接是互相隔离的，缓存导致数据可见，不提交就放入缓存(事务回滚)可能会导致脏读
 
 Session 每个会话(SqlSession)都有一个事务缓存管理器(TransactionCacheManager) 用来管理 多个暂存区(TransactionCache)  都指向同一个缓存区(
 SynchronizedCache)  
 commit之后才会将暂存区的数据移入缓存区
+
+session -> cachingExecutor -> TransactionCacheManager -> 多个暂存区(TransactionCache) -> 缓存区
 
 org.apache.ibatis.cache.Cache.java  
 装饰器 + 责任链
@@ -98,7 +102,8 @@ org.apache.ibatis.cache.Cache.java
 | --- | --- | --- | --- | --- | --- |  
 | 线程同步 | 记录命中率 | 防溢出 | 过期清理 | 防穿透 | 内存存储 |
 
-先取二级缓存(CacheExecutor)数据，然后查一级缓存(BaseExecutor)  
+sqlSession -> CachingExecutor(二级缓存) -> BaseExecutor(Simple/Reuse/Batch一级缓存) -> 数据库 -> 填充数据到暂存区 先取二级缓存(CacheExecutor)
+数据，然后查一级缓存(BaseExecutor)  
 ![二级缓存执行流程](./image/二级缓存执行流程.png)
 
 clearOnCommit 同一个会话中 查 改 查  
@@ -108,52 +113,69 @@ commit之后将暂存区同步到缓存区
 
 **StatementHandler**:
 
-1. 生命JdbcStatement 填充参数
+`SqlSession -> Executor -> StatementHandler  `  
+`      1 ->      1 ->      n`
+
+jdbc处理器，基于jdbc构建statement并设置参数，然后执行sql  
+每调用一次会话中的sql，都会有与之对应且唯一的statement实例
+
+1. 声明JdbcStatement 填充参数
 2. sql执行  
    jdbc处理器
-   ![statementHandler继承关系](./image/statementhandler-hierarchy.jpg)
+   ![statementHandler继承关系](./image/statementhandler-继承关系.jpg)  
+   有三种：Simple/Prepared/Callable StatementHandler  
    执行语句，预编译，设置参数，执行jdbc，结果集映射
 
 | 执行器 | 基础jdbc处理器 | 预处理器 | 参数处理器 | 结果处理器 | 
 | --- | --- | --- | --- | --- |
-| Executor | BaseStatementHandler |PreparedStatementHandler | ParameterHandler | ResultSetHandler |
+| Executor | BaseStatementHandler(处理公共参数(超时时间，取回行数fetchSize)) | PreparedStatementHandler | ParameterHandler | ResultSetHandler |
 
 ![statementHandler执行流程](./image/statementhandler处理流程.jpg)
 
 参数处理  
 java bean -> jdbc参数
 
-ParamNameResolver
+`ParamNameResolver`
 
 1. 单个参数 默认不转换，除非设置了@Param
 2. 多个参数
-    1. 转换成Param1, Param2 -> Map
-    2. 通过@Param中的name属性转换
+    1. 转换成Param1, Param2 -> Map 一直有
+    2. 通过@Param中的name属性转换，这样就不会有arg0之类的参数
     3. 基于反射转换成变量名，如果不支持(jdk7)转换成arg0, arg1
 
-ParameterHandler
+ParameterHandler  
+将参数封装成ParameterMapping -> TypeHandler设置参数
 
 1. 单个原始类型 直接映射，忽略sql中的引用名称
 2. Map类型 基于key映射
 3. Object 基于属性名映射，支持嵌套对象属性访问(MetaObject)
 
-ResultSetHandler(将结果集的行转换成对象)  
-ResultContext(存放当前行对象，以及解析状态和控制解析数量)  
-ResultHandler(处理存入解析结果)
+**ResultSetHandler**完成主要的结果集映射功能(将**结果集**的行转换成对象) -> 实现类DefaultResultSetHandler  
+ResultContext(存放当前行对象，以及解析状态和控制解析数量(可以暂停解析过程))  
+ResultHandler(处理存入**解析结果bean**)  
+![结果集处理](image/结果集处理.png)
 
-mybatis映射体系(反射)  
+mybatis映射体系(反射实现)  
+
+![ObjectWrapper继承关系](image/ObjectWrapper继承关系.png)
+
+#### 工具类
+
 **MetaObject**
 
-1. 查找属性， 忽略大小写，支持驼峰，支持子属性
+1. 查找属性， 忽略大小写，支持驼峰，支持**子属性**
 2. 获取属性值
     1. 基于点获取子属性 user.name
     2. 基于索引获取列表值 users[1].name
     3. 基于key获取map值 user[name]
 3. 设置属性
     1. 可设置子属性值
-    2. 支持自动创建子属性(必须带有无参构造函数，不能有集合)
+    2. 支持自动创建子属性(必须带有无参构造函数，不能有集合(集合需要手动new))
 
-**BeanWrapper**(只能设置当前对象的属性，不能设置属性的属性)
+自动映射 手动映射 分开处理  
+如果有嵌套子查询(走缓存)也需要处理
+
+**BeanWrapper**(MetaObject的底层实现，只能设置**当前对象**的属性，不能设置属性的属性(BaseWrapper))
 
 1. 查找属性
 2. 获取属性值
@@ -161,12 +183,15 @@ mybatis映射体系(反射)
 4. 创建属性
 
 **MetaClass**  
-基于属性名获取set, get方法，支持子属性获取
+基于属性名获取set, get方法，支持**子属性**获取
 
 **Reflector**  
-基于属性名获取set, get方法，属性类别，不支持子属性获取
+基于属性名获取set, get方法，属性类别，只支持**当前对象**属性获取
 
-**手动结果集映射**
+`MetaObject + BeanWrapper `设置获取对象的属性
+`MetaClass + Reflector` 设置获取Class对象的属性
+
+**手动结果集映射(Bean <--> Row)**
 ResultMap  
 ResultMapping
 
@@ -213,23 +238,23 @@ ResultMapping
 **自动映射**  
 列名 <----> 属性名
 
-1. 列名和属性名同事存在(忽略大小写)
+1. 列名和属性名同时存在(忽略大小写)
 2. 当前列未手动设置映射
 3. 属性类别存在TypeHandler
 4. 开启autoMapping(默认开启)
 
 UmMappedColumnAutoMapping
 
-**嵌套子查询**
+#### 嵌套子查询
 
 ```html
-
 <resultMap id="blogMap" type="blog">
     <result column="title" property="title"></result>
-    <association property="author" column="authorId" select="selectUserByBlogId"></association>
-    <collection property="comments" select="selectCommentsByBlogId"></collection>
+    <association property="author" column="authorId" select="selectUserById"></association>
+    <!-- 如果传递多个column参数可以用 column="blogId=id,name=name" -->
+    <collection property="comments" column="blogId=id" select="selectCommentsByBlogId"></collection>
 </resultMap>
-<select id="selectUserByBlogId" resultType="user">
+<select id="selectUserById" resultType="user">
     select * from users where id=#{userId}
 </select>
 <select id="selectCommentsByBlogId" resultType="comment">
@@ -239,27 +264,29 @@ UmMappedColumnAutoMapping
 
 **循环依赖流程**
 
-1. 填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载 DefaultResultSetHandler)
+`DefaultResultSetHandler类`
+
+1. 填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载)
 2. 获取嵌套查询值 **getNestedQueryMappingValue**
 3. 执行准备
-    1. 准备参数
-    2. 获取MappedStatement
-    3. 获取动态sql
-    4. 创建缓存key
+    1. 获取MappedStatement **getMappedStatement**
+    2. 准备参数 **prepareParameterForNestedQuery**
+    3. 获取动态sql  **getBoundSql**
+    4. 创建缓存**createCacheKey**
 
-4. 是否命中一级缓存 ->  延迟装载(解决循环依赖 queryStack) deferLoad
-5. 是否懒加载 ->  懒加载(动态代理)
-6. 实时加载
+4. 是否命中一级缓存**isCached** ->  延迟装载(解决循环依赖，放入延迟加载的列表中等**主查询结束之后**(queryStack=0)填充ResultObject对象的值，判断是否需要清空缓存) **deferLoad**
+5. 是否懒加载 **isLazy** ->  懒加载(动态代理) 
+6. 实时加载 **loadResult**
 
 **懒加载**  
-动态代理(一次操作)
+用动态代理bean实现(一次操作)
 
 | 装载器 | 执行器 | 数据库 |
 | --- | --- | --- |
-| ResultLoader | Executor一次操作 | 数据库 |
+| getXXX -> ResultLoader | Executor一次操作 | 数据库 |
 
 调用set方法，懒加载会被移除  
-序列化之后依然可进行
+java原生序列化之后依然可进行
 
 sqlSession 多次操作
 
@@ -274,8 +301,5 @@ ResultLoaderMap 存储待加载的属性，属性加载后被移除
 LoadPair 准备加载环境，在反序列化并触发加载是，需要重写构建Configuration以及ResultLoader加载器与相关参数  
 ResultLoader 装载器，执行查询并获取结果，跨线程或原执行器关闭，将会构造一个新的执行器  
 
-
-
-
-
+#### 联合查询 嵌套查询
 
