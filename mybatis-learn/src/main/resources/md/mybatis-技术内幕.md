@@ -1,16 +1,70 @@
 ## mybatis技术内幕
 
-1. **接口层** sqlSession
-2. **核心处理层** 配置解析，参数映射，sql解析，sql执行，结果集映射，插件
-3. **基础支持层** 数据源模块，事务管理模块，缓存模块，Binding模块，反射模块，类型转换，日志模块，资源加载，解析器模块
+### 1. 入门
+
+#### 1.1 ORM简介
+
+传统jdbc连接数据库：
+
+1. 注册数据库驱动，明确指定url，用户名，密码等
+2. 通过`DriverManager`获取连接`Connection`
+3. 通过连接而创建`Statenment`语句
+4. 通过`Statement`对象执行`sq`l语句，得到`ResultSet`
+5. 通过`ResultSet`读取数据，将数据转换成`Bean`
+6. 关闭`ResultSet， Statement， Connection`等，释放资源
+
+ORM(Object Relational Mapping)对象关系映射
+
+#### 1.2 持久层框架
+
+Hibernate，jpa，mybatis
+
+#### 1.3 实例
+
+程序先加载mybatis-config.xml配置文件，根据配置文件创建SqlSessionFactory对象，通过SSF对象创建Session对象，SqlSession中定义了执行sql的各种方法，通过SqlSession对象执行sql语句，完成数据库操作，最后通过SqlSession对象提交提交事务，关闭资源。
+
+```java
+SqlSessionFactory factory = new SqlSessionFactoryBuilder()
+      .build(Resources.getResourceAsReader("mybatis-config.xml"));
+SqlSession session = factory.openSession();
+Map<String, Object> parameters = new HashMap<>();
+parameters.put("id", "1");
+Blog blog = session.selectOne("com.mybatis.learn.mapper.BlogMapper", parameters);
+System.out.println("blog = " + blog);
+session.close();
+```
+
+#### 1.4 mybais的架构
+
+1. **接口层**
+
+    sqlSession
+
+2. **核心处理层** 
+
+   配置解析，参数映射，sql解析，sql执行，结果集映射，插件
+
+3. **基础支持层** 
+
+   数据源模块，事务管理模块，缓存模块，Binding模块，反射模块，类型转换，日志模块，资源加载，解析器模块
+
+mybatis的整体架构
+
+![image-20210817190842631](image\mybatis架构.png)
+
+一条sql语句的大致执行过程
 
 ![mybatis语句执行过程](./image/mybatis语句执行过程.png)
 
-### 基础支持层
 
-2.1 解析器模块  
-相关类(org.mybatis.ibatis.parsing)：XPathParser XNode TokenHandler PropertyParser  
-GenericTokenParser 字占位符解析器：按顺序查找openToken和closeToken，解析得到占位符的字面量，交给TokenHandler处理，将解析结果 重新拼装成字符串并返回  
+
+### 2. 基础支持层
+
+#### 2.1 解析器模块  
+三种解析方式：DOM, SAX, StAX
+
+相关类(org.mybatis.ibatis.parsing)：`XPathParser XNode TokenHandler PropertyParser`  
+`GenericTokenParser`字占位符解析器：按顺序查找openToken和closeToken，解析得到占位符的字面量，交给`TokenHandler`处理，将解析结果 重新拼装成字符串并返回  
 不仅可以用于默认值解析，也可以用于动态sql语句的解析
 
 TokenHandler有四个实现
@@ -20,79 +74,117 @@ TokenHandler有四个实现
 3. DynamicCheckerTokenParser
 4. BindingTokenParser
 
-2.2 反射工具
+#### 2.2 反射工具
 
-1. **Reflector**(缓存反射操作需要使用的类的元信息)  
+1. **Reflector**(缓存反射操作需要使用的**类的元信息**)  
    JavaBean:
-   字段: 定义的成员变量 属性: 通过getter/setter得到的(只与类中的方法有关，与是否存在成员变量没有关系)  
-   定义的字段：
-    1. 可读/写属性的名称集合 String[]
-    2. 属性相应的setter/getter方法 Map<String, Invoker> (key: 属性名称, value: 对应setter/getter方法对应Method对象的封装)
-    3. 属性相应setter/getter方法的返回值类型 Map<String, Class<?>> (key: 属性名, value: setter/getter方法的返回值类型)
-    4. 默认的构造方法 Constructor<?>
+   
+   ​	字段: 定义的成员变量 
+   
+   ​	属性: 通过getter/setter得到的(只与类中的方法有关，与是否存在成员变量没有关系)  
+   
+   定义的字段，在构造函数中初始化：
+   
+    1. 可读/写属性的名称集合 `String[]`
+    2. 属性相应的`setter/getter`方法 `Map<String, Invoker>` (`key`: 属性名称, `value`: 对应`setter/getter`方法对应`Method`对象的封装)
+    3. 属性相应`setter/getter`方法的返回值类型 `Map<String, Class<?>>` (`key`: 属性名, `value`: `setter/getter`方法的返回值类型)
+    4. 默认的构造方法 `Constructor<?>`
     5. 所有属性名称的集合
 
-   Map<String, Invoker> getMethods = new HashMap<>();  
+   ​       `Map<String, Invoker> getMethods = new HashMap<>();`  
    ![invoker接口](./image/invoker接口.png)  
-   invoke(Object target, Object[] args)  用于获取指定字段的值(getXxx)或执行指定的方法(Method.invoke())  
-   getType() 返回属性相应的类型
-
-    1. 查找默认的构造方法(无参的)
-    2. addGetMethods(clazz) 处理clazz中的getter方法，填充getMethods和getTypes集合
-        1. getClassMethods(clazz) 获取当前类及其父类中定义的所有方法的唯一签名 和 对应的Method对象
-        2. 从上面方法中返回的数组中查找该类中定义的所有getter方法(暂时存放到conflictingGetters集合中)
-        3. resolveGetterConflicts 子类覆盖父类的getter方法且返回值发生变化时，处理冲突
-    5. addFields(clazz) 处理类中定义的所有字段，将处理后的字段信息添加到集合中(final static can only be set by the classloader)  
-       同时提供了多个get*()方法用于读取上述集合中记录的元信息
-
-   ReflectorFactory接口 实现对Reflector对象的创建和缓存  
-   DefaultReflectorFactory  
-   使用ConcurrentHashMap<Class, Reflector>完成对Reflector对象的缓存
-
-2. **TypeParameterResolver**  
+   Invoker接口中的两个方法
+   
+   1. `invoke(Object target, Object[] args) ` 方法用于获取指定字段的值(getXxx)或执行指定的方法(`Method.invoke()`)  
+   2. `getType()` 返回属性相应的类型
+   
+   填充上述属性过程：
+   
+    1. 查找默认的构造方法(无参的)，通过反射遍历所有的构造函数
+    2. `addGetMethods(clazz)`处理`clazz`中的`getter`方法，填充`getMethods`和`getTypes`集合
+        1. `getClassMethods(clazz)`获取当前类及其父类中定义的所有方法的唯一签名(返回值类型#方法名称:参数类型列表(`java.lang.String#getSingnature:java.lang.reflect.Method`)) 和 对应的`Method`对象
+        2. 从上面方法中返回的数组中查找该类中定义的所有`getter`方法(暂时存放到`conflictingGetters`集合中)
+        3. `resolveGetterConflicts` 子类覆盖父类的`getter`方法且返回值发生变化时，处理冲突(同时一个方法父类返回`List`，子类返回`ArrayList`时，选择子类的)
+    5. `addFields(clazz)` 处理类中定义的所有字段，将处理后的字段信息添加到集合中(`final static can only be set by the classloader`)  
+       同时提供了多个`get*()`方法用于读取上述集合中记录的元信息
+   
+   `ReflectorFactory`接口 实现对`Reflector`对象的创建和缓存
+   
+   `DefaultReflectorFactory `是唯一实现
+   
+   使用`ConcurrentHashMap<Class, Reflector>`完成对`Reflector`对象的缓存；`findForClass`为指定`class`对象创建`Reflector`对象放入上面的`Map`中
+   
+2. **TypeParameterResolver** 
    ![Type继承关系](./image/Type继承关系.png)  
-   java.lang.reflect.Type接口:
-    1. 子接口: ParameterizedType, GenericArrayType, TypeVariable, WildcardType
-        1. ParameterizedType 参数化类型 List<String>  
-           Type getRawType 返回参数化类型中的原始类型List  
-           Type[] getActualTypeArguments 返回类型变量或实际类型列表 String  
-           Type getOwnerType 返回类型所所属类型 Map<K,V>接口是Map.Entry<K, V>接口的所有者
-        2. TypeVariable 类型变量，反应在JVM编译该泛型前的信息 List<T> T就是类型变量  
-           Type[] getBounds 获取类型变量的上界，为明确声明则为Object Test<T extends User> -> User  
-           D getGenericDeclaration 获取声明改类型变量的原始类型 Test<T extends User> -> Test  
-           String getName 获取源码中定义的名称 T
-        3. GenericArrayType 表示数组类型且组成元素是ParameterizedType 或 TypeVariable  
-           Type getGenericComponentType 返回数组的组成元素
-        4. WildcardType 通配符泛型(<? extends Number>, <? super Integer>)  
-           Type[] getUpperBounds 返回泛型变量上界  
-           Type[] getLowerBounds 返回泛型变量下界
-    2. 实现类: Class
-        1. Class: 它表示的是原始类型。Class 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过“类名.class ”、“对象.getClass()
-           ”或是Class.forName(类名)等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
+   `java.lang.reflect.Type`接口:
+   
+    1. 子接口: `ParameterizedType, GenericArrayType, TypeVariable, WildcardType`
+        1. `ParameterizedType`表示参数化类型 `List<String>` 
+        
+           `Type getRawType` 返回参数化类型中的原始类型`List `
+        
+           `Type[] getActualTypeArguments` 返回类型变量或实际类型列表 `String` 
+        
+           `Type getOwnerType` 返回类型所所属类型 `Map<K,V>`接口是`Map.Entry<K, V>`接口的所有者
+        
+        2. `TypeVariable` 类型变量，反应在JVM编译该泛型前的信息 `List<T>` `T`就是类型变量，编译时需要被转换成具体类型才能正常使用 
+        
+           `Type[] getBounds` 获取类型变量的上界，未明确声明则为`Object` `Test<T extends User> -> User` 
+        
+           `D getGenericDeclaration` 获取声明改类型变量的原始类型 `class Test<T extends User>` -> `Test`
+        
+           `String getName` 获取源码中定义的名称 `T`
+        
+        3. `GenericArrayType`表示数组类型且组成元素是`ParameterizedType` 或 `TypeVariable`
+        
+           `Type getGenericComponentType` 返回数组的组成元素
+        
+        4. `WildcardType` 通配符泛型(`<? extends Number>, <? super Integer>`) 
+        
+           `Type[] getUpperBounds` 返回泛型变量上界
+        
+           `Type[] getLowerBounds` 返回泛型变量下界
+    2. 实现类: `Class`
+        1. `Class`: 它表示的是原始类型。`Class` 类的对象表示JVM中的一个类或接口，每个Java 类在JVM里都表现为一个Class 对象。在程序中可以通过`类名.class` 、`对象.getClass()`
+           或是`Class.forName(类名)`等方式获取Class。**数组也被映射为Class对象，所有元素类型相同且维数相同的数组都共享同一个Class对象**
+   
+   `TypeParameterResolver` 提供静态方法解析指定类中的**字段**，**方法返回值**或**方法参数类型**
+   
+   存在复杂继承关系以及泛型定义时，该类帮助解析字段、方法参数、或方法返回值的类型
+   
+   `resolveFieldType()` 解析字段类型
+   
+3. **ObjectFactory** 
 
-   TypeParameterResolver 提供静态方法解析指定类中的字段，方法返回值或方法参数类型  
-   存在复杂继承关系以及泛型定义时，该类帮助解析字段、方法参数、或方法返回值的类型  
-   resolveFieldType() 解析字段类型
+   通过多个重载的`create`方法创建指定类型的对象
 
-3. **ObjectFactory**  
-   通过多个重载的create方法创建对象
-    1. 设置配置信息
+   该接口提供的方法如下：
+
+    1. 设置配置信息(`properties`)
+
     2. 通过无参构造函数创建指定对象
+
     3. 根据参数列表选择指定的构造函数创建对象
-    4. 检测指定类型是否为集合(用来处理java.util.Collection及其子类)
-       DefaultObjectFactory是唯一实现  
-       instantiateClass根据传入的参数列表选择合适的构造函数实例化对象
+
+    4. 检测指定类型是否为集合(用来处理`java.util.Collection`及其子类)
+       
+       `DefaultObjectFactory`是唯一实现
+       
+       `instantiateClass`根据传入的参数列表选择合适的构造函数实例化对象
 
 4. **Property**工具类
-    1. PropertyTokenizer Iterable 对传入的表达式进行解析 (orders[0].items[0].name)
+    1. `PropertyTokenizer `Iterable 对传入的表达式进行解析 (`orders[0].items[0].name`)
        当前表达式，当前表达式的索引名，索引下标，子表达式
-    2. PropertyNamer 完成方法名到属性名的转换(将方法名开头的is, get, set去掉并将首字母小写)
-    3. PropertyCopier 完成相同类型的两个对象之间的属性值拷贝
+    2. `PropertyNamer`完成方法名到属性名的转换(将方法名开头的`is, get, set`去掉并将首字母小写)
+    3. `PropertyCopier`完成相同类型的两个对象之间的属性值拷贝(包括父类中定义的字段)
 
-5. **MetaClass**  
-   MetaClass 构造函数是私有的，通过静态方法(forClass)创建 通过组合Reflector和PropertyTokenizer完成对复杂属性表达式的解析，并获取指定属性描述信息  
-   findProperty hasGetter hasSetter  
-   封装一个Reflector对象(通过ReflectorFactory创建), 类级别的元信息封装和处理
+5. **MetaClass** 
+
+   `MetaClass` 构造函数是私有的，通过静态方法(`forClass`)创建 通过组合`Reflector`和`PropertyTokenizer`完成对**复杂属性表达式的解析**，并获取指定属性描述信息
+
+   `findProperty hasGetter hasSetter`
+
+   封装一个`Reflector`对象(通过`ReflectorFactory`创建), 类级别的元信息封装和处理
 
 6. **ObjectWrapper**
    对象级别的元信息处理：抽象了对象的属性信息，定义一系列查询和更新对象属性信息的方法  
@@ -563,7 +655,7 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
    ```text
     isCached 检测是否缓存的指定查询的结果对象
     deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
-    ``` 
+   ```
    DeferredLoad(内部类)负责从localCache缓存中延迟加载结果对象
 
     ```text
@@ -713,7 +805,7 @@ TransactionalCache.entriesMissedInCache集合的作用
    SqlSessionManager.openSession方法使用底层封装的SqlSessionFactory对象的openSession方法来创建SqlSession对象  
    SqlSessionManager.select*/update等方法直接调用sqlSessionProxy字段记录的SqlSession代理对象的相应方法实现的
 
-### 插件
+### 4. 插件
 
 1. 插件
 
