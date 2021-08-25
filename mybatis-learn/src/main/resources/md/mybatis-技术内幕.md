@@ -76,44 +76,44 @@ TokenHandler有四个实现
 
 #### 2.2 反射工具
 
-1. **Reflector**(缓存反射操作需要使用的**类的元信息**)  
-   JavaBean:
-   
-   ​	字段: 定义的成员变量 
-   
-   ​	属性: 通过getter/setter得到的(只与类中的方法有关，与是否存在成员变量没有关系)  
-   
-   定义的字段，在构造函数中初始化：
-   
-    1. 可读/写属性的名称集合 `String[]`
-    2. 属性相应的`setter/getter`方法 `Map<String, Invoker>` (`key`: 属性名称, `value`: 对应`setter/getter`方法对应`Method`对象的封装)
-    3. 属性相应`setter/getter`方法的返回值类型 `Map<String, Class<?>>` (`key`: 属性名, `value`: `setter/getter`方法的返回值类型)
-    4. 默认的构造方法 `Constructor<?>`
-    5. 所有属性名称的集合
+**1. Reflector**(缓存反射操作需要使用的**类的元信息**)  
+JavaBean:
 
-   ​       `Map<String, Invoker> getMethods = new HashMap<>();`  
-   ![invoker接口](./image/invoker接口.png)  
-   Invoker接口中的两个方法
-   
-   1. `invoke(Object target, Object[] args) ` 方法用于获取指定字段的值(getXxx)或执行指定的方法(`Method.invoke()`)  
-   2. `getType()` 返回属性相应的类型
-   
-   填充上述属性过程：
-   
-    1. 查找默认的构造方法(无参的)，通过反射遍历所有的构造函数
-    2. `addGetMethods(clazz)`处理`clazz`中的`getter`方法，填充`getMethods`和`getTypes`集合
-        1. `getClassMethods(clazz)`获取当前类及其父类中定义的所有方法的唯一签名(返回值类型#方法名称:参数类型列表(`java.lang.String#getSingnature:java.lang.reflect.Method`)) 和 对应的`Method`对象
-        2. 从上面方法中返回的数组中查找该类中定义的所有`getter`方法(暂时存放到`conflictingGetters`集合中)
-        3. `resolveGetterConflicts` 子类覆盖父类的`getter`方法且返回值发生变化时，处理冲突(同时一个方法父类返回`List`，子类返回`ArrayList`时，选择子类的)
-    5. `addFields(clazz)` 处理类中定义的所有字段，将处理后的字段信息添加到集合中(`final static can only be set by the classloader`)  
-       同时提供了多个`get*()`方法用于读取上述集合中记录的元信息
-   
-   `ReflectorFactory`接口 实现对`Reflector`对象的创建和缓存
-   
-   `DefaultReflectorFactory `是唯一实现
-   
-   使用`ConcurrentHashMap<Class, Reflector>`完成对`Reflector`对象的缓存；`findForClass`为指定`class`对象创建`Reflector`对象放入上面的`Map`中
-   
+​	字段: 定义的成员变量 
+
+​	属性: 通过getter/setter得到的(只与类中的方法有关，与是否存在成员变量没有关系)  
+
+定义的字段，在构造函数中初始化：
+
+ 1. 可读/写属性的名称集合 `String[]`
+ 2. 属性相应的`setter/getter`方法 `Map<String, Invoker>` (`key`: 属性名称, `value`: 对应`setter/getter`方法对应`Method`对象的封装)
+ 3. 属性相应`setter/getter`方法的返回值类型 `Map<String, Class<?>>` (`key`: 属性名, `value`: `setter/getter`方法的返回值类型)
+ 4. 默认的构造方法 `Constructor<?>`
+ 5. 所有属性名称的集合
+
+​       `Map<String, Invoker> getMethods = new HashMap<>();`  
+![invoker接口](./image/invoker接口.png)  
+Invoker接口中的两个方法
+
+1. `invoke(Object target, Object[] args) ` 方法用于获取指定字段的值(getXxx)或执行指定的方法(`Method.invoke()`)  
+2. `getType()` 返回属性相应的类型
+
+填充上述属性过程：
+
+ 1. 查找默认的构造方法(无参的)，通过反射遍历所有的构造函数
+ 2. `addGetMethods(clazz)`处理`clazz`中的`getter`方法，填充`getMethods`和`getTypes`集合
+     1. `getClassMethods(clazz)`获取当前类及其父类中定义的所有方法的唯一签名(返回值类型#方法名称:参数类型列表(`java.lang.String#getSingnature:java.lang.reflect.Method`)) 和 对应的`Method`对象
+     2. 从上面方法中返回的数组中查找该类中定义的所有`getter`方法(暂时存放到`conflictingGetters`集合中)
+     3. `resolveGetterConflicts` 子类覆盖父类的`getter`方法且返回值发生变化时，处理冲突(同时一个方法父类返回`List`，子类返回`ArrayList`时，选择子类的)
+ 5. `addFields(clazz)` 处理类中定义的所有字段，将处理后的字段信息添加到集合中(`final static can only be set by the classloader`)  
+    同时提供了多个`get*()`方法用于读取上述集合中记录的元信息
+
+`ReflectorFactory`接口 实现对`Reflector`对象的创建和缓存
+
+`DefaultReflectorFactory `是唯一实现
+
+使用`ConcurrentHashMap<Class, Reflector>`完成对`Reflector`对象的缓存；`findForClass`为指定`class`对象创建`Reflector`对象放入上面的`Map`中
+
 2. **TypeParameterResolver** 
    ![Type继承关系](./image/Type继承关系.png)  
    `java.lang.reflect.Type`接口:
@@ -154,92 +154,130 @@ TokenHandler有四个实现
    
    `resolveFieldType()` 解析字段类型
    
-3. **ObjectFactory** 
-
+   **2. ObjectFactory** 
+   
    通过多个重载的`create`方法创建指定类型的对象
-
+   
    该接口提供的方法如下：
-
+   
     1. 设置配置信息(`properties`)
-
+   
     2. 通过无参构造函数创建指定对象
-
+   
     3. 根据参数列表选择指定的构造函数创建对象
-
+   
     4. 检测指定类型是否为集合(用来处理`java.util.Collection`及其子类)
        
        `DefaultObjectFactory`是唯一实现
        
        `instantiateClass`根据传入的参数列表选择合适的构造函数实例化对象
-
-4. **Property**工具类
-    1. `PropertyTokenizer `Iterable 对传入的表达式进行解析 (`orders[0].items[0].name`)
-       当前表达式，当前表达式的索引名，索引下标，子表达式
-    2. `PropertyNamer`完成方法名到属性名的转换(将方法名开头的`is, get, set`去掉并将首字母小写)
-    3. `PropertyCopier`完成相同类型的两个对象之间的属性值拷贝(包括父类中定义的字段)
-
-5. **MetaClass** 
-
+   
+   **3. Property**工具类
+   
+   1. `PropertyTokenizer `Iterable 对传入的表达式进行解析 (`orders[0].items[0].name`)
+      当前表达式，当前表达式的索引名，索引下标，子表达式
+   2. `PropertyNamer`完成方法名到属性名的转换(将方法名开头的`is, get, set`去掉并将首字母小写)
+   3. `PropertyCopier`完成相同类型的两个对象之间的属性值拷贝(包括父类中定义的字段)
+   
+   **4. MetaClass** 
+   
    `MetaClass` 构造函数是私有的，通过静态方法(`forClass`)创建 通过组合`Reflector`和`PropertyTokenizer`完成对**复杂属性表达式的解析**，并获取指定属性描述信息
-
+   
    `findProperty hasGetter hasSetter`
-
+   
    封装一个`Reflector`对象(通过`ReflectorFactory`创建), 类级别的元信息封装和处理
-
-6. **ObjectWrapper**
-   对象级别的元信息处理：抽象了对象的属性信息，定义一系列查询和更新对象属性信息的方法  
-   get(PropertyTokenizer) // 如果封装的是普通对象，调用相应属性对应的getter方法；如果是集合，获取指定key或下标对应的value (set(PropertyTokenizer, Object value)
-   设置值)  
-   findProperty(String, boolean) 查找属性表达式指定的属性 (是否忽略下划线)  
-   getGetter/SetterNames 查找可写/读属性的名称集合  
-   getGetter/SetterType 解析属性表达式指定属性的getter的参数类型/setter方法的返回值类型  
-   hasGetter/Setter 判断指定属性是否有getter/setter方法  
-   instantiatePropertyValue 为属性表达式的指定属性创建相应的MetaObject对象  
-   isCollection add addAll (封装对象是否是Collection集合，向集合中添加对象)
-
-   ObjectWrapperFactory(实现类DefaultObjectWrapperFactory不可用)负责创建ObjectWrapper  
+   
+   **5. ObjectWrapper**
+   
+   **对象级别**的元信息处理：抽象了对象的属性信息，定义一系列查询和更新对象属性信息的方法
+   
+   `get(PropertyTokenizer)` // 如果封装的是普通对象，调用相应属性对应的getter方法；如果是集合，获取指定key或下标对应的`value` (`set(PropertyTokenizer, Object value)`
+   设置值)
+   
+   `findProperty(String, boolean)` 查找属性表达式指定的属性 (是否忽略下划线)
+   
+   `getGetter/SetterNames` 查找可写/读属性的名称集合  
+   
+   `getGetter/SetterType` 解析属性表达式指定属性的getter的参数类型/setter方法的返回值类型
+   
+   `hasGetter/Setter` 判断指定属性是否有getter/setter方法
+   
+   `instantiatePropertyValue` 为属性表达式的指定属性创建相应的MetaObject对象
+   
+   `isCollection add addAll` (封装对象是否是Collection集合，向集合中添加对象)
+   
+   `ObjectWrapperFactory`(实现类`DefaultObjectWrapperFactory`不可用，需要在myabtis-config.xml中自己实现类进行扩展)负责创建`ObjectWrapper`
+   
    ![ObjectWrapper继承关系.png](./image/ObjectWrapper继承关系.png)  
-   BaseWrapper(处理集合)
-    1. resolveCollection 解析属性表达式并获取指定的属性
-    2. get/setCollectionValue 解析属性表达式的索引信息，然后获取/设置对应项
+   `BaseWrapper`(处理集合)
+   
+    1. `resolveCollection` 解析属性表达式并获取指定的属性
+    2. `get/setCollectionValue` 解析属性表达式的索引信息，然后获取/设置对应项
+   
+   `BeanWrapper`(处理bean对象)
+   
+   `MapWrapper`(处理`Map<String, Object>`类型的对象)
+   
+   `CollectionWrapper`(不可用)
+   
+   **6. MetaObject**
+   
+   构造函数会根据传入的原始对象类型和`ObjectFactory`工厂的实现，创建相应的`ObjectWrapper`对象
+   
+   完成**属性表达式的解析**过程(例如:order[0].id)(MetaObject -> BeaWrapper -> MetaObject等递归)
 
-   BeanWrapper(处理bean对象)  
-   MapWrapper(处理Map<String, Object>类型的对象)  
-   CollectionWrapper(不可用)
+#### 2.3 类型转换  
+完成**Java类型 和 JDBC类型**的互相转换
 
-7. **MetaObject**
-   完成属性表达式的解析过程
+`JdbcType`(枚举类型) -> `JDBC`中的数据类型(`TYPE_CODE`记录改类型在`java.sql.Types`中的常量编码)，并且通过静态集合`HashMap<TYPE_CODE, JdbcType>`记录常量编码和JdbcType之间的对应关系
 
-2.3 **TypeHandler**类型转换  
-完成Java类型 和 JDBC类型的互相转换  
-用于完成单个参数以及单个列值的类型转换，如果存在多列值转换成一个java对象，应有限考虑<resultMap>  
-enum JdbcType代表JDBC中的数据类型，HashMap<TYPE_CODE, JdbcType>维护常量编码和JdbcType的关系
+**1. TypeHandler类型转换器**
 
-所有的类型转换器全部继承TypeHandler
+用于完成单个参数以及单个列值的类型转换，如果存在多列值转换成一个java对象，应优先考虑`<resultMap>定义映射规则 `
 
-1. setParameter 通过PreparedStatement为sql语句绑定参数时，将数据从JdbcType类型转换成Java类型
-2. getResult 从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型
+所有的类型转换器全部继承`TypeHandler`
 
-BaseTypeHandler 实现了TypeHandler接口，对于数据非空处理都交给了子类
+1. `setParameter` 通过PreparedStatement为sql语句绑定参数时，将数据从JdbcType类型转换成Java类型
+2. `getResult` (多个重载)从ResultSet中获取结果时，将数据从Java类型转换成JdbcType类型
 
-TypeHandlerRegistry 管理众多的TypeHandler，MyBaits初始化时，会为所有已知的TypeHandler创建对象，注册在其中
+用户如果想自定义使用`BaseTypeHandler` ，实现了`TypeHandler`接口并继承**TypeReference**抽象类，对于数据非空处理都交给了子类
 
-1. 记录JdbcType与TypeHandler的对应关系(用于从结果集读取数据时，将数据从Jdbc类型转换成Java类型 char, varchar -> java.lang.String)
-2. 记录Java类型向指定JdbcType转换时，需要使用的TypeHandler对象(一对多 java.lang.String -> char, varchar)
-3. 记录全部TypeHandler的类型 和 相应的对象
-4. 一个空TypeHandler集合标识
+**2. TypeHandlerRegistry**
 
-注册TypeHandler  
-通过读取(@MappedJdbcTypes(JdbcType.VARCHAR), @MappedTypes({Date.class}))两个注解的内容，注册进去 或 扫描包下的类注册进去  
-查找TypeHandler  
-根据指定的JavaType 和 JdbcType查找相应的TypeHandler对象
+`TypeHandlerRegistry` **管理**众多的`TypeHandler`，`MyBaits`初始化时，会为所有已知的`TypeHandler`创建对象，注册在其中，该对象中的核心字段功能: 
 
-TypeAliasRegistry 完成别名注册和管理功能(管理别名和java类型之间的关系)  
-registerAlias(String, Class) key转小写放入  
-registerAliases(packageName, Class) 扫描指定包下的所有类，为指定类的子类添加别名  
-registerAlias(Class) 尝试读取@Alias注解
+1. `JDBC_TYPE_HANDLER_MAP`: 记录`JdbcType`与`TypeHandler`的对应关系(用于从结果集读取数据时，将数据从Jdbc类型转换成Java类型 `char, varchar -> java.lang.String`)
 
-2.4 日志模块  
+2. `TYPE_HANDLER_MAP`: 记录`Java`类型向指定`JdbcType`转换时，需要使用的`TypeHandler`对象(一对多 `java.lang.String -> char, varchar`)
+
+3. `ALL_TYPE_HANDLER_MAP`: 记录全部`TypeHandler`的类型 和 `TypeHandler`对象
+
+4. `NULL_TYPE_HANDLER_MAP`: 一个空`TypeHandler`集合标识
+
+   
+
+1. 注册`TypeHandler`
+
+   通过读取(`@MappedJdbcTypes(JdbcType.VARCHAR), @MappedTypes({Date.class})`)两个注解的内容，注册进去 或 扫描包下的类注册进去(`TypeHandlerRegistry`的构造函数会将常用的类型处理器注册进去)
+
+2. 查找TypeHandler
+
+   根据指定的`JavaType` 和` JdbcType`查找相应的`TypeHandler`对象
+
+**3. TypeAliasRegistry**
+
+为类添加别名
+
+`TypeAliasRegistry` 完成别名注册和管理功能(管理别名和java类型之间的关系`Map<String, Class<?>>`)
+
+`registerAlias(String, Class)` key转小写放入
+
+`registerAliases(packageName, Class)` 扫描指定包下的所有类，为指定类的子类添加别名
+
+`registerAlias(Class)` 尝试读取@Alias注解
+
+#### 2.4 日志模块
+
 设计模式六大原则：
 
 1. 单一职责原则
@@ -249,51 +287,72 @@ registerAlias(Class) 尝试读取@Alias注解
 5. 迪米塔法则
 6. **开放封闭原则**  程序要对扩展开放，对修改关闭
 
-适配器模式  
-需要适配的类(真正的业务逻辑) <--> 适配器 <--> 目标接口(调用者使用)  
-com.apache.ibatis.logging.Log 定义日志模块的功能  
-LogFactory 创建对应的日志组件适配器
+**适配器**模式
 
-代理模式 与 JDK动态代理    
-代理模式可以控制对真正对象的访问，或在执行业务处理的前后进行相关的预处理和后置处理，还可以用于实现延迟加载(当系统真正使用数据时，再调用 代理对象完成数据库的查询并返回数据)功能  
-静态代理：编译阶段就要创建代理类  
-JDK动态代理：InvocationHandler接口，动态创建代理类并通过类加载器加载，然后在创建代理对象时将InvokeHandler对象作为构造参数传入，当调用代理对象时 ，会调用InvokerHandler.invoke()
+需要适配的类(真正的业务逻辑) <--> 适配器 <--> 目标接口(调用者使用)
+
+`com.apache.ibatis.logging.Log` 定义日志模块的功能
+
+`LogFactory` 创建对应的日志组件适配器
+
+**代理**模式 与 JDK动态代理 
+
+代理模式可以控制对真正对象的访问，或在执行业务处理的前后进行相关的预处理和后置处理，还可以用于实现延迟加载(当系统真正使用数据时，再调用 代理对象完成数据库的查询并返回数据)功能
+
+静态代理：编译阶段就要创建代理类
+
+JDK动态代理：`InvocationHandler`接口，动态创建代理类并通过类加载器加载，然后在创建代理对象时将`InvokeHandler`对象作为构造参数传入，当调用代理对象时 ，会调用`InvokerHandler.invoke()`
 方法，并最终调用真正的业务对象的相应方法。
 
 ```text
 Proxy.newProxyInstance(ClassLoader loader, Class<?> interfaces, InvocationHandler h)
-loader 加载动态生成的代理类的类加载器
-interfaces 业务类实现的接口
-h 实现InvocationHandler的对象
+	1. loader 加载动态生成的代理类的类加载器
+	2. interfaces 业务类实现的接口
+	3. h 实现InvocationHandler的对象
 
-业务逻辑(java.lang.reflect.Proxy类中):
+业务逻辑(java.reflect.Proxy.newProxyInstance方法中):
  1. 获取代理类的Class getProxyClass0(loader, interfaces)
    1. 限制接口数量 < 65536
    2. 如果指定的类加载器中已经创建了实现指定接口的代理类，就从缓存(WeakCache<ClassLoader, Class<?>[], Class<?>> proxyClassCache)中查找；否则通过ProxyClassFactory创建实现指定接口的代理类
-   3. WeakCache.get先从缓存中查找代理类，如果找不到创建Factory(WeakCache的内部类)对象调用get方法获取代理类，Factory.get会调用ProxyClassFactory.apply(Proxy类中，是一个BiFunction<T, U, R>(提供两个参数，返回一个结果))创建并加载代理类
+   3. WeakCache.get先从缓存中查找代理类，如果找不到创建Factory(WeakCache的内部类)对象调用get方法获取代理类，Factory.get会调用ProxyClassFactory.apply(Proxy类中，是一个BiFunction<T, U, R>(提供两个参数，返回一个结果))创建并加载代理类(包名+代理类名称前缀+编号)
    4. apply方法先检测代理类需要实现的接口集合，确定代理类的名称，创建代理类并写入文件，最后加载代理类返回对应的Class对象用于后续实例化代理类对象
  2. 获取代理类的构造方法
  3. 创建代理对象
 ```
 
-JDBC调试  
-com.apache.ibatis.logging.jdbc包通过动态代理的方式将JDBC操作通过指定的日志框架打印出来  
-![BaseJdbcLogger继承关系](./image/BaseJdbcLogger继承关系.png)
-BaseJdbcLogger ConnectionLogger 封装Connection对象同时为其封装的Connection对象创建相应的代理对象  
-PreparedStatementLogger 封PreparedStatement对象，并为其创建相应的代理对象  
-StatementLogger  
-ResultLogger 封装ResultSet对象并为其创建代理对象 (展示查询结果)
+**JDBC调试**
+`com.apache.ibatis.logging.jdbc`包通过动态代理的方式将`JDBC`操作通过指定的日志框架打印出来
 
-2.5 资源加载  
-org.apache.ibatis.io包封装ClassLoader以及读取资源文件的API  
-ClassLoaderWrapper是ClassLoader包装器，确保返回给系统的时正确的加载器(安装指定的顺序依次检测封装的ClassLoader对象，从中选择一个可以的完成相关功能)  
-包含 系统指定的默认加载 和 系统类(应用程序类)加载器  
-类加载器顺序 [参数指定的类加载器，系统值的默认加载器，当前线程绑定的类加载器，加载当前类使用的类加载器，系统类加载器]  
-Resources 调用封装的ClassLoaderWrapper返回数据  
-ResolverUtil 根据指定条件查找指定包下的类  
+![BaseJdbcLogger继承关系](./image/BaseJdbcLogger继承关系.png)
+`BaseJdbcLogger` 抽象类：记录绑定sql参数相关的set*方法名称 和 执行sql语句相关的方法名称
+
+`ConnectionLogger` 封装`Connection`对象同时为其封装的`Connection`对象创建相应的代理对象(为`prepareStatement, prepareCall, createStatement` 方法提供代理)
+
+`PreparedStatementLogger` 封`PreparedStatement`对象，并为其创建相应的代理对象(为各种`set*, execute*`方法提供代理 )
+
+`StatementLogger`与`PreparedStatementLogger`类似
+
+`ResultLogger` 封装`ResultSet`对象并为其创建代理对象 (展示查询结果，代理`next`方法)
+
+2.5 资源加载
+
+org.apache.ibatis.io包封装ClassLoader以及读取资源文件的API
+
+ClassLoaderWrapper是ClassLoader包装器，确保返回给系统的时正确的加载器(安装指定的顺序依次检测封装的ClassLoader对象，从中选择一个可以的完成相关功能)
+
+包含 系统指定的默认加载 和 系统类(应用程序类)加载器
+
+类加载器顺序 [参数指定的类加载器，系统值的默认加载器，当前线程绑定的类加载器，加载当前类使用的类加载器，系统类加载器]
+
+Resources 调用封装的ClassLoaderWrapper返回数据
+
+ResolverUtil 根据指定条件查找指定包下的类
+
 条件Test(只有一个matches<Class>方法, IsA(检测类是否继承类指定类或接口) AnnotatedWith(检测类是否添加了指定注解))，类中封装了当前使用的类加载器(默认时当前线程上下文绑定的ClassLoader(
-Thread.currentThread().getContextClassLoader()))  
-单例模式(volatile禁止指令重排序；第一次访问类中的静态字段时，会触发类的加载)  
+Thread.currentThread().getContextClassLoader()))
+
+单例模式(volatile禁止指令重排序；第一次访问类中的静态字段时，会触发类的加载)
+
 VFS 虚拟文件系统 查找指定路径下的资源，包括jar包
 
 2.6 DataSource  
