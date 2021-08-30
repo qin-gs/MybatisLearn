@@ -334,50 +334,74 @@ Proxy.newProxyInstance(ClassLoader loader, Class<?> interfaces, InvocationHandle
 
 `ResultLogger` 封装`ResultSet`对象并为其创建代理对象 (展示查询结果，代理`next`方法)
 
-2.5 资源加载
+#### 2.5 资源加载
 
-org.apache.ibatis.io包封装ClassLoader以及读取资源文件的API
+`org.apache.ibatis.io`包封装`ClassLoader`以及读取资源文件的API
 
-ClassLoaderWrapper是ClassLoader包装器，确保返回给系统的时正确的加载器(安装指定的顺序依次检测封装的ClassLoader对象，从中选择一个可以的完成相关功能)
+```text
+java中的类加载器(双亲委派模型)
+1. Bootstrap classloader 加载jdk自带的rt.jar
+2. Extention classloader 加载jre/lib/ext目录下的类 和 java.net.dirs系统属性指定的目录下的类
+3. System classloader 加载classpath中的类文件
+```
+
+`ClassLoaderWrapper`: 是`ClassLoader`包装器，确保返回给系统的是正确的加载器(按照指定的顺序依次检测封装的`ClassLoader`对象，从中选择一个可用的完成相关功能)
 
 包含 系统指定的默认加载 和 系统类(应用程序类)加载器
 
-类加载器顺序 [参数指定的类加载器，系统值的默认加载器，当前线程绑定的类加载器，加载当前类使用的类加载器，系统类加载器]
+```text
+类加载器顺序:
+1. 参数指定的类加载器
+2. 系统值的默认加载器
+3. 当前线程绑定的类加载器
+4. 加载当前类使用的类加载器
+5. 系统类加载器
+```
 
-Resources 调用封装的ClassLoaderWrapper返回数据
+`Resources` 调用封装的`ClassLoaderWrapper`返回数据
 
-ResolverUtil 根据指定条件查找指定包下的类
+**ResolverUtil** 根据指定条件查找指定包下的类
 
-条件Test(只有一个matches<Class>方法, IsA(检测类是否继承类指定类或接口) AnnotatedWith(检测类是否添加了指定注解))，类中封装了当前使用的类加载器(默认时当前线程上下文绑定的ClassLoader(
-Thread.currentThread().getContextClassLoader()))
+条件`Test`(只有一个`matches<Class>`方法
 
-单例模式(volatile禁止指令重排序；第一次访问类中的静态字段时，会触发类的加载)
+`IsA`(检测类是否继承类指定类或接口)
 
-VFS 虚拟文件系统 查找指定路径下的资源，包括jar包
+`AnnotatedWith`(检测类是否添加了指定注解))，类中封装了当前使用的类加载器(默认时当前线程上下文绑定的`ClassLoader(Thread.currentThread().getContextClassLoader()))`
 
-2.6 DataSource  
-实现javax.sql.DataSource接口  
-PooledDataSource 和 UnpooledDataSource 使用工厂创建  
-工厂方法模式：添加新产品时，只需要添加对应的工厂实现类，而不必修改已有的代码。符合开放封闭原则。同时工厂方法先调用者隐藏具体产品的实例化细节 调用者只需要了解工厂接口和产品接口，面向接口编程。  
+**单例模式**(`volatile`禁止指令重排序；第一次访问类中的静态字段时，会触发类的加载)
+
+**VFS** 虚拟文件系统 查找指定路径下的资源，包括jar包
+
+#### 2.6 DataSource  
+
+实现`javax.sql.DataSource`接口
+
+`PooledDataSource` 和 `UnpooledDataSource` 使用工厂创建
+
+工厂方法模式：添加新产品时，只需要添加对应的工厂实现类，而不必修改已有的代码。符合开放封闭原则。同时工厂方法向调用者隐藏具体产品的实例化细节 调用者只需要了解工厂接口和产品接口，面向接口编程。
+
 但是新增新产品实现类时，还要提供一个与之对应的工厂实现类，新增的类是成对实现的。
 
-org.apache.ibatis.datasource.DataSourceFactory 工厂接口(配置属性，获取数据源)  
-UnpooledDataSourceFactory, PooledDataSourceFactory 两个工厂接口实现类  
-![DataSourceFactory继承关系.png](./image/DataSourceFactory继承关系.png)  
-javax.sql.DataSource 产品接口  
+`org.apache.ibatis.datasource.DataSourceFactory` 工厂接口(配置属性，获取数据源)
+
+`UnpooledDataSourceFactory`, `PooledDataSourceFactory `两个工厂接口实现类
+
+![DataSourceFactory继承关系.png](./image/DataSourceFactory继承关系.png)
+javax.sql.DataSource 产品接口
 UnpooledDataSource, PooledDataSource 两个产品类
 
 1. UnpooledDataSource 每次getConnection都会获取一个新的连接
-2. PooledDataSource  
-   使用PooledConnection封装代理(Jdk动态代理，对close方法进行代理)真正的Connection对象(真正的Connection对象是由封装的UnpooledDataSource创建的)    
-   PolledDataSource封装数据库连接池的统计信息  
-   使用PoolState管理PooledConnection对象的状态，分别用List存储 空闲和活跃状态的连接，并存储一些关于连接池的统计字段  
-   使用线程池 调用代理对象的close方法时，并未真正关闭数据库连接，而是将PooledConnection对象归还给数据库，供之后重用  
-   PooledDataSource.getConnection的时候会获取PooledConnection对象，然后getProxyConnection获取数据库连接的代理对象  
+2. PooledDataSource
+   使用PooledConnection封装代理(Jdk动态代理，对close方法进行代理)真正的Connection对象(真正的Connection对象是由封装的UnpooledDataSource创建的)
+   PolledDataSource封装数据库连接池的统计信息
+   使用PoolState管理PooledConnection对象的状态，分别用List存储 空闲和活跃状态的连接，并存储一些关于连接池的统计字段
+   使用线程池 调用代理对象的close方法时，并未真正关闭数据库连接，而是将PooledConnection对象归还给数据库，供之后重用
+   PooledDataSource.getConnection的时候会获取PooledConnection对象，然后getProxyConnection获取数据库连接的代理对象
    修改数据库配置的时候，会清空所有的连接
 
-2.7 Transaction  
-org.apache.ibatis.transaction.Transaction 接口  
+#### 2.7 Transaction
+
+org.apache.ibatis.transaction.Transaction 接口
 获取数据库连接 提交事务 回滚事务 关闭数据库连接 获取事务超时时间
 
 ![Transaction继承关系.png](./image/Transaction继承关系.png)  
@@ -385,7 +409,7 @@ JdbcTransaction JdbcTransactionFactory 依赖Jdbc Connection控制事务的提�
 ManagedTransaction ManagedTransactionFactory 依赖容器控制事务的提交回滚  
 TransactionFactory 在指定连接上创建事务对象 或 从指定数据源中获取数据库连接，在连接上创建事务对象
 
-2.8 Binding模块
+#### 2.8 Binding模块
 
 MapperRegistry MapperProxyFactory  
 MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactory之间的关系  
@@ -425,7 +449,10 @@ MethodSignature(内部类)
 记录RowBounds, ResultHandler的位置  
 记录该方法对应的ParamNameResolver对象
 
-2.9 缓存 org.apache.ibatis.cache.Cache接口  
+#### 2.9 缓存 
+
+org.apache.ibatis.cache.Cache接口  
+
 装饰器模式: 动态的为对象添加功能，基于组合的方式实现  
 Cache定义(缓存对象id, 向缓存中加数据, 根据指定key查找缓存项, 删除key对应的缓存项, 清空缓存, 获取缓存个数)  
 Cache中唯一确定一个缓存项是通过缓存项中的key, 使用CacheKey表示(封装多个影响缓存项的因素)
