@@ -182,17 +182,21 @@ mybatis映射体系(反射实现)
 3. 设置属性
 4. 创建属性
 
-**MetaClass**  
+**MetaClass**
+
 基于属性名获取set, get方法，支持**子属性**获取
 
-**Reflector**  
+**Reflector**
+
 基于属性名获取set, get方法，属性类别，只支持**当前对象**属性获取
 
 `MetaObject + BeanWrapper `设置获取对象的属性
+
 `MetaClass + Reflector` 设置获取Class对象的属性
 
 **手动结果集映射(Bean <--> Row)**
-ResultMap  
+
+ResultMap
 ResultMapping
 
 1. constructor
@@ -205,22 +209,24 @@ ResultMapping
        <resultMap id="blogMap" type="blog">
          <id></id>
          <result></result>
-         <association property="comments">
+         <association property="comments" column="comment_id">
            <id column="id" property="id"></id>
            <result column="body" property="body"></result>
          </association>
        </resultMap>
        ```
+       
     2. 嵌套查询
        ```html
        <resultMap id="blogMap" type="blog">
          <id></id>
          <result></result>
-         <association property="comments" select="selectCommentByBlogId">
+         <association property="comments" column="comment_id" select="selectCommentByBlogId">
          </association>
        </resultMap>
        <select id="selectCommentByBlogId" />
        ```
+       
     3. 外部映射
        ```html
        <resultMap id="blogMap" type="blog">
@@ -243,7 +249,7 @@ ResultMapping
 3. 属性类别存在TypeHandler
 4. 开启autoMapping(默认开启)
 
-UmMappedColumnAutoMapping
+`UmMappedColumnAutoMapping`
 
 #### 嵌套子查询
 
@@ -266,40 +272,77 @@ UmMappedColumnAutoMapping
 
 `DefaultResultSetHandler类`
 
-1. 填充属性 (填充属性是触发子查询 queryStack 手动填充是会触发懒加载)
-2. 获取嵌套查询值 **getNestedQueryMappingValue**
+1. 填充属性 (填充属性是触发子查询 `queryStack` 手动填充是会触发懒加载)
+2. 获取嵌套查询值 `getNestedQueryMappingValue`
 3. 执行准备
-    1. 获取MappedStatement **getMappedStatement**
-    2. 准备参数 **prepareParameterForNestedQuery**
-    3. 获取动态sql  **getBoundSql**
-    4. 创建缓存**createCacheKey**
+    1. 获取 `MappedStatement` `getMappedStatement`
+    2. 准备参数 `prepareParameterForNestedQuery`
+    3. 获取动态sql  `getBoundSql`
+    4. 创建缓存`createCacheKey`
 
-4. 是否命中一级缓存**isCached** ->  延迟装载(解决循环依赖，放入延迟加载的列表中等**主查询结束之后**(queryStack=0)填充ResultObject对象的值，判断是否需要清空缓存) **deferLoad**
-5. 是否懒加载 **isLazy** ->  懒加载(动态代理) 
-6. 实时加载 **loadResult**
+4. 是否命中一级缓存`isCached` ->  延迟装载`deferLoad`(解决循环依赖，放入延迟加载的列表中等**主查询结束之后**(`queryStack=0`)填充`ResultObject`对象的值，判断是否需要清空缓存) 
+5. 是否懒加载 `isLazy` ->  懒加载(动态代理) 
+6. 实时加载 `loadResult`
 
-**懒加载**  
+**懒加载**
+
 用动态代理bean实现(一次操作)
 
 | 装载器 | 执行器 | 数据库 |
 | --- | --- | --- |
 | getXXX -> ResultLoader | Executor一次操作 | 数据库 |
 
-调用set方法，懒加载会被移除  
-java原生序列化之后依然可进行
+调用set方法修改bean的属性，懒加载会被移除 
+
+```java
+User user = sqlSession.selectOne("selectUserById", id);
+user.setName("a"); // 这里会修改查询出来的bean对象的属性值
+System.out.println(user);
+```
+
+只有java的原生序列化，反序列化之后才进行加载(会懒加载)(序列化需要设置`configurationFactory`(内部类的标识:`外部类$内部类`))
+
+```java
+ByteArrayOutputStream baos = new ByteArrayOutputStream();
+ObjectOuptputStream oos = new ObjectOutputStream(baos);
+oos.writeObj(bean);
+// oos.toByteArray(); 将反序列化结果写入文件或其他
+```
 
 sqlSession 多次操作
 
 填充属性 获取嵌套查询值
-**循环依赖流程解析**
 
-懒加载实现  
-Bean$proxy ->  ResultLoader ->  Executor ->  数据库
+**懒加载内部实现**
 
-MethodHandler 处理方法代理逻辑  
-ResultLoaderMap 存储待加载的属性，属性加载后被移除  
-LoadPair 准备加载环境，在反序列化并触发加载是，需要重写构建Configuration以及ResultLoader加载器与相关参数  
-ResultLoader 装载器，执行查询并获取结果，跨线程或原执行器关闭，将会构造一个新的执行器  
+懒加载实现
+
+`Bean$proxy ->  ResultLoader ->  Executor ->  数据库` Bean对象被动态代理了(里面放了额外的属性`MethodHandler`)
+
+1. `MethodHandler` 处理方法代理逻辑  
+2. `ResultLoaderMap` 存储待加载的属性(记载之前，将要加载的属性移除)  
+3. `LoadPair` 准备加载环境，在反序列化并触发懒加载时，需要重写构建`Configuration`以及`ResultLoader`加载器与相关参数  
+4. `ResultLoader` 装载器，执行查询并获取结果。跨线程或原执行器关闭(**反序列化后**执行懒加载时用`CloseExecutor`标识执行器已经关闭了，需要重写创建一个)，将会构造一个新的执行器  
+
+```java
+// 这几个方法会触发懒加载，调试debug的时候会触发懒加载
+protected Set<String> lazyLoadTriggerMethods = new HashSet<String>(Arrays.asList(new String[] { "equals", "clone", "hashCode", "toString" }));
+```
 
 #### 联合查询 嵌套查询
 
+
+
+#### 动态sql
+
+每次执行sql时，基于预先构建的脚本和参数动态的构建可执行语句
+
+if， foeach， choose, when, otherwise， trim, where, set， bind
+
+ognl表达式: 访问对象属性，调用方法等
+
+xml -> SqlSource -> BoundSql
+
+SqlSource, DynamicSqlSource(动态编译), RawSqlSource(静态编译), ProviderSqlSource(freemarker),  StaticSqlSource(存储已编译的SqlSource)
+
+![SqlSource继承关系](image/SqlSource继承关系.png)
