@@ -133,6 +133,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6</version>
+        </dependency>
     </dependencies>
 
     <!-- maven默认不会将src目录下的xml, properties等资源文件打包进classes，需要加上如下配置-->

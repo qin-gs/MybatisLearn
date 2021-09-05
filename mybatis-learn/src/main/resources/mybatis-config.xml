@@ -24,7 +24,7 @@
         <!--开启驼峰式命名转换：Table{create_time} -> Entity{createTime}-->
         <setting name="mapUnderscoreToCamelCase" value="true"/>
         <!--<setting name="configurationFactory" value=""/>-->
-        <setting name="logImpl" value="LOG4J"/>
+        <setting name="logImpl" value="LOG4J2"/>
     </settings>
 
     <typeAliases>

@@ -79,7 +79,7 @@ public class PageInterceptor implements Interceptor {
 		}
 		String dialectClass = result.get(dbName);
 		try {
-			Dialect dialect = (Dialect) Class.forName(dialectClass).newInstance();
+			Dialect dialect = (Dialect) Class.forName(dialectClass).getDeclaredConstructor().newInstance();
 			this.setDialect(dialect);
 		} catch (Exception e) {
 			e.printStackTrace();

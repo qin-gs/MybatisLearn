@@ -91,7 +91,7 @@ class User implements Serializable {
 
 	/**
 	 * 反序列化时，在{@code readObject}之后被调用
-	 * 可以通过this得到{@code readObject}的结果进行进一步的修改或直接替换
+	 * 可以通过this得到{@code readObject}的结果进行进一步地修改或直接替换
 	 * 最终反序列化返回的是该方法的结果, {@code readObject}中反序列化生成的对象被抛弃
 	 * 可以用来 保护性恢复单例、枚举类型的对象
 	 * 恢复的时候没有改变其值（val的值没有改变）同时恢复的时候又能正常实现枚举值的对比（地址也完全相同）

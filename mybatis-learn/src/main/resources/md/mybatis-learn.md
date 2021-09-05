@@ -1,3 +1,5 @@
+
+
 #### mybatis执行器
 
 **SqlSession**(门面):
@@ -11,24 +13,24 @@ sqlSession 和 Executor 是一对一的关系
 
 1. 基本功能： 改 查 维护缓存 事务管理
 2. 辅助api: 提交关闭执行器，批处理刷新  
-   ![executor继承关系](./image/executor-hierarchy.jpg)
+   <img src="./image/executor-hierarchy.jpg" alt="executor继承关系" style="zoom:50%;" />
 
-BaseExecutor (公共操作 一级缓存 获取连接 (query update 调用(doQuery, doUpdate子类实现)))  
+BaseExecutor (公共操作 一级缓存 获取连接 (query update 调用(doQuery, doUpdate子类实现)))
 CachingExecutor (二级缓存 装饰器delegate)
 
-SimpleExecutor 简单执行器 (实现doQuery, doUpdate)  
-ReuseExecutor 可重用执行器  
+SimpleExecutor 简单执行器 (实现doQuery, doUpdate)
+ReuseExecutor 可重用执行器
 BatchExecutor 批处理执行器 只针对修改操作，需要手动刷新
 
 装饰器模式(在不改变原有类结构和继承的情况下，通过包装原对象去扩展一个新功能)
 
 #### 一级缓存
 
-作用域为session  
-一级缓存：BaseExecutor  
+作用域为session
+一级缓存：BaseExecutor
 二级缓存：CachingExecutor
 
-命中场景:  
+命中场景:
 运行时参数相关:
 
 1. sql 和 参数相同
@@ -86,16 +88,14 @@ Mapper ->  SqlSession ->  BaseExecutor(一级缓存 query) ->  StatementHandler
 
 xml 和 java类 中的缓存不是同一个命名空间，必须使用<cache namespace="" />
 
-提交之后才能命中缓存  
+提交之后才能命中缓存
 会话直接是互相隔离的，缓存导致数据可见，不提交就放入缓存(事务回滚)可能会导致脏读
 
-Session 每个会话(SqlSession)都有一个事务缓存管理器(TransactionCacheManager) 用来管理 多个暂存区(TransactionCache)  都指向同一个缓存区(
-SynchronizedCache)  
-commit之后才会将暂存区的数据移入缓存区
+Session 每个会话(SqlSession)都有一个事务缓存管理器(TransactionCacheManager) 用来管理 多个暂存区(TransactionCache)  都指向同一个缓存区(SynchronizedCache)，commit之后才会将暂存区的数据移入缓存区
 
 session -> cachingExecutor -> TransactionCacheManager -> 多个暂存区(TransactionCache) -> 缓存区
 
-org.apache.ibatis.cache.Cache.java  
+org.apache.ibatis.cache.Cache.java
 装饰器 + 责任链
 
 | SynchronizedCache | LRUCache | LoggingCache | ScheduledCache | BlockingCache | PerpetualCache |  
@@ -103,36 +103,37 @@ org.apache.ibatis.cache.Cache.java
 | 线程同步 | 记录命中率 | 防溢出 | 过期清理 | 防穿透 | 内存存储 |
 
 sqlSession -> CachingExecutor(二级缓存) -> BaseExecutor(Simple/Reuse/Batch一级缓存) -> 数据库 -> 填充数据到暂存区 先取二级缓存(CacheExecutor)
-数据，然后查一级缓存(BaseExecutor)  
-![二级缓存执行流程](./image/二级缓存执行流程.png)
+数据，然后查一级缓存(BaseExecutor)
 
-clearOnCommit 同一个会话中 查 改 查  
-第二次改将clearOnCommit=true，由于没有提交，只是清空了暂存区  
-第三次查能查到但是返回null  
+<img src="./image/二级缓存执行流程.png" alt="二级缓存执行流程" style="zoom:50%;" />
+
+clearOnCommit 同一个会话中 查 改 查
+第二次改将clearOnCommit=true，由于没有提交，只是清空了暂存区
+第三次查能查到但是返回null
 commit之后将暂存区同步到缓存区
 
 **StatementHandler**:
 
-`SqlSession -> Executor -> StatementHandler  `  
+`SqlSession -> Executor -> StatementHandler  `
 `      1 ->      1 ->      n`
 
-jdbc处理器，基于jdbc构建statement并设置参数，然后执行sql  
+jdbc处理器，基于jdbc构建statement并设置参数，然后执行sql
 每调用一次会话中的sql，都会有与之对应且唯一的statement实例
 
 1. 声明JdbcStatement 填充参数
-2. sql执行  
+2. sql执行
    jdbc处理器
-   ![statementHandler继承关系](./image/statementhandler-继承关系.jpg)  
-   有三种：Simple/Prepared/Callable StatementHandler  
+   ![statementHandler继承关系](./image/statementhandler-继承关系.jpg) 
+   有三种：Simple/Prepared/Callable StatementHandler
    执行语句，预编译，设置参数，执行jdbc，结果集映射
 
 | 执行器 | 基础jdbc处理器 | 预处理器 | 参数处理器 | 结果处理器 | 
 | --- | --- | --- | --- | --- |
 | Executor | BaseStatementHandler(处理公共参数(超时时间，取回行数fetchSize)) | PreparedStatementHandler | ParameterHandler | ResultSetHandler |
 
-![statementHandler执行流程](./image/statementhandler处理流程.jpg)
+<img src="./image/statementhandler处理流程.jpg" alt="statementHandler执行流程" style="zoom:50%;" align="left" />
 
-参数处理  
+参数处理 
 java bean -> jdbc参数
 
 `ParamNameResolver`
@@ -143,21 +144,23 @@ java bean -> jdbc参数
     2. 通过@Param中的name属性转换，这样就不会有arg0之类的参数
     3. 基于反射转换成变量名，如果不支持(jdk7)转换成arg0, arg1
 
-ParameterHandler  
+ParameterHandler
 将参数封装成ParameterMapping -> TypeHandler设置参数
 
 1. 单个原始类型 直接映射，忽略sql中的引用名称
 2. Map类型 基于key映射
 3. Object 基于属性名映射，支持嵌套对象属性访问(MetaObject)
 
-**ResultSetHandler**完成主要的结果集映射功能(将**结果集**的行转换成对象) -> 实现类DefaultResultSetHandler  
-ResultContext(存放当前行对象，以及解析状态和控制解析数量(可以暂停解析过程))  
-ResultHandler(处理存入**解析结果bean**)  
-![结果集处理](image/结果集处理.png)
+**ResultSetHandler**完成主要的结果集映射功能(将**结果集**的行转换成对象) -> 实现类DefaultResultSetHandler
+ResultContext(存放当前行对象，以及解析状态和控制解析数量(可以暂停解析过程))
+ResultHandler(处理存入**解析结果bean**)
+<img src="image/结果集处理.png" alt="结果集处理" style="zoom: 33%;" />
 
 mybatis映射体系(反射实现)  
 
-![ObjectWrapper继承关系](image/ObjectWrapper继承关系.png)
+<img src="image/ObjectWrapper继承关系.png" alt="ObjectWrapper继承关系" style="zoom: 33%;" />
+
+
 
 #### 工具类
 
@@ -172,7 +175,7 @@ mybatis映射体系(反射实现)
     1. 可设置子属性值
     2. 支持自动创建子属性(必须带有无参构造函数，不能有集合(集合需要手动new))
 
-自动映射 手动映射 分开处理  
+自动映射 手动映射 分开处理
 如果有嵌套子查询(走缓存)也需要处理
 
 **BeanWrapper**(MetaObject的底层实现，只能设置**当前对象**的属性，不能设置属性的属性(BaseWrapper))
@@ -241,7 +244,7 @@ ResultMapping
        </resultMap>
        ```
 
-**自动映射**  
+**自动映射**
 列名 <----> 属性名
 
 1. 列名和属性名同时存在(忽略大小写)
@@ -331,18 +334,114 @@ protected Set<String> lazyLoadTriggerMethods = new HashSet<String>(Arrays.asList
 
 #### 联合查询 嵌套查询
 
+(使用`left join, <collection>, <association>`)
 
+一对一，一对多
+
+`DefaultResultSetHandler#handleRowValueForNestedResultMap`
+
+1. 创建`RowKey` `createRowKey` (根据<association>中的<id>，如果是嵌套查询会加上所在对象的key `combineKeys`)
+2. 读取暂存区(判断`RowKey`是否存在)，如果不存在继续第3步；如果存在不再创建对象直接填充属性
+3. 创建对象然后变成 `MetaObject`
+4. 填充复合属性(走到第1步) `applyNestedResultMappings`(这里会通过`put/removeAncestor`操作解决循环引用问题)
+5. 暂存
+
+`gerRowValue` 作用 `ResultSet -> Bean`
+
+**循环引用**
+
+`ancensotObjects` 存储当前正在解析的对象(嵌套的对象)
 
 #### 动态sql
 
 每次执行sql时，基于预先构建的脚本和参数动态的构建可执行语句
 
-if， foeach， choose, when, otherwise， trim, where, set， bind
+`if, foeach, choose, when, otherwise, trim, where, set, bind`
 
 ognl表达式: 访问对象属性，调用方法等
 
-xml -> SqlSource -> BoundSql
+每次sql执行: `xml -> SqlSource -> BoundSql`
 
-SqlSource, DynamicSqlSource(动态编译), RawSqlSource(静态编译), ProviderSqlSource(freemarker),  StaticSqlSource(存储已编译的SqlSource)
+```
+SqlSource(sql, 参数映射, 参数值)
+DynamicSqlSource(动态编译，每执行一次sql都会编译一次生成不同的sql)
+RawSqlSource(静态编译, 只编译一次)
+    SqlSourceBuilder: 将#变成?, 将参数拿出来变成ParameterMapping
+ProviderSqlSource(支持第三方freemarker)
+StaticSqlSource(存储已编译的SqlSource)
+```
 
 ![SqlSource继承关系](image/SqlSource继承关系.png)
+
+`DynamincSqlSource -> SqlNode -> DynamicContext -> BoundSql`
+
+SqlNode:
+
+![SqlNode继承关系](image/SqlNode继承关系.png)
+
+`RootSqlNode`只有一个，通过`MixedSqlNode`节点将多个其他节点进行包装
+
+**动态标签xml解析过程**
+
+`XMLScriptBuilder`: 初始化时将所有的`NodeHandler`注册进去
+
+ `xml -> XNode -> SqlNode -> SqlSource(三种)`
+
+`TextSqlNode(${}), StaticTextSqlNode(#{}), NodeHandler`
+
+![image-20210905164914432](image/NodeHandler继承关系.png)
+
+#### Configuration配置
+
+`mybatis-config.xml + mapper.xml +  @Annotation -> Configuration`
+
+全局配置
+
+1. properties
+2. settings
+3. typeAliases
+4. typeHandlers
+5. objectFactory
+6. plugins
+7. environments
+8. databaseIdProvider
+9. mappers
+
+全局组件
+
+1. mapperRegistery
+2. typeHandlerRegistery
+3. typeAliasRegistery
+4. caches (xml和注解的二级缓存空间不是同一个)
+5. resultMaps
+6. interceptorChain
+
+简单工厂进行构建
+
+1. newExecutor 设置执行器: 默认SimpleExecutor, 如果加了缓存CacheExecutor, 还可以加插件
+2. newResultSetHandler
+3. newParameterHandler
+4. newStatementHandler
+
+组件的构建过程
+
+`SqlSessionFactoryBuilder -> XMLConfigBuilder#parseConfiguration`
+
+`MappedStatement`构建过程
+
+`XMLConfigBuilder -> MapperRegistery(扫描包@Mapper) -> MapperAnnotationBuilder(映射注解构建器) -> MapperBuilderAssistant(构建器)`
+
+xml 和 @Mapper 文件的解析过程中会解析同名的另一个
+
+#### 插件
+
+1. Executor 执行器(四种)
+2. StatementHandler 创建Statement
+3. ParameterHandler 设置参数
+4. ResultSetHandler 执行完后处理结果集
+
+实现原理
+
+InterceptorChain
+
+调用 -> Proxy  -> 判断是否为拦截方法(@Signature) -> 是的话调用intercept方法 -> 最后调用目标方法
