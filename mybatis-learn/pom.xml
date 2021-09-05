@@ -135,5 +135,27 @@
         </dependency>
     </dependencies>
 
+    <!-- maven默认不会将src目录下的xml, properties等资源文件打包进classes，需要加上如下配置-->
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                    <!--有时候可能需要加上properties-->
+                    <include>**/*.properties</include>
+                </includes>
+                <!--是否替换-->
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/test/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
 
 </project>
