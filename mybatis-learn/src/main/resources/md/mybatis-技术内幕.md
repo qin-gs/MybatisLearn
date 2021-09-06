@@ -63,8 +63,8 @@ mybatis的整体架构
 #### 2.1 解析器模块  
 三种解析方式：DOM, SAX, StAX
 
-相关类(org.mybatis.ibatis.parsing)：`XPathParser XNode TokenHandler PropertyParser`  
-`GenericTokenParser`字占位符解析器：按顺序查找openToken和closeToken，解析得到占位符的字面量，交给`TokenHandler`处理，将解析结果 重新拼装成字符串并返回  
+相关类(org.mybatis.ibatis.parsing)：`XPathParser XNode TokenHandler PropertyParser`
+`GenericTokenParser`字占位符解析器：按顺序查找openToken和closeToken，解析得到占位符的字面量，交给`TokenHandler`处理，将解析结果 重新拼装成字符串并返回
 不仅可以用于默认值解析，也可以用于动态sql语句的解析
 
 TokenHandler有四个实现
@@ -76,7 +76,7 @@ TokenHandler有四个实现
 
 #### 2.2 反射工具
 
-**1. Reflector**(缓存反射操作需要使用的**类的元信息**)  
+**1. Reflector**(缓存反射操作需要使用的**类的元信息**)
 JavaBean:
 
 ​	字段: 定义的成员变量 
@@ -91,8 +91,8 @@ JavaBean:
  4. 默认的构造方法 `Constructor<?>`
  5. 所有属性名称的集合
 
-​       `Map<String, Invoker> getMethods = new HashMap<>();`  
-![invoker接口](./image/invoker接口.png)  
+​       `Map<String, Invoker> getMethods = new HashMap<>();`
+![invoker接口](./image/invoker接口.png)
 Invoker接口中的两个方法
 
 1. `invoke(Object target, Object[] args) ` 方法用于获取指定字段的值(getXxx)或执行指定的方法(`Method.invoke()`)  
@@ -105,7 +105,7 @@ Invoker接口中的两个方法
      1. `getClassMethods(clazz)`获取当前类及其父类中定义的所有方法的唯一签名(返回值类型#方法名称:参数类型列表(`java.lang.String#getSingnature:java.lang.reflect.Method`)) 和 对应的`Method`对象
      2. 从上面方法中返回的数组中查找该类中定义的所有`getter`方法(暂时存放到`conflictingGetters`集合中)
      3. `resolveGetterConflicts` 子类覆盖父类的`getter`方法且返回值发生变化时，处理冲突(同时一个方法父类返回`List`，子类返回`ArrayList`时，选择子类的)
- 5. `addFields(clazz)` 处理类中定义的所有字段，将处理后的字段信息添加到集合中(`final static can only be set by the classloader`)  
+ 5. `addFields(clazz)` 处理类中定义的所有字段，将处理后的字段信息添加到集合中(`final static can only be set by the classloader`)
     同时提供了多个`get*()`方法用于读取上述集合中记录的元信息
 
 `ReflectorFactory`接口 实现对`Reflector`对象的创建和缓存
@@ -115,7 +115,7 @@ Invoker接口中的两个方法
 使用`ConcurrentHashMap<Class, Reflector>`完成对`Reflector`对象的缓存；`findForClass`为指定`class`对象创建`Reflector`对象放入上面的`Map`中
 
 2. **TypeParameterResolver** 
-   ![Type继承关系](./image/Type继承关系.png)  
+   ![Type继承关系](./image/Type继承关系.png) 
    `java.lang.reflect.Type`接口:
    
     1. 子接口: `ParameterizedType, GenericArrayType, TypeVariable, WildcardType`
@@ -387,54 +387,101 @@ java中的类加载器(双亲委派模型)
 `UnpooledDataSourceFactory`, `PooledDataSourceFactory `两个工厂接口实现类
 
 ![DataSourceFactory继承关系.png](./image/DataSourceFactory继承关系.png)
-javax.sql.DataSource 产品接口
-UnpooledDataSource, PooledDataSource 两个产品类
+`javax.sql.DataSource` 产品接口
+`UnpooledDataSource`, `PooledDataSource `两个产品类
 
-1. UnpooledDataSource 每次getConnection都会获取一个新的连接
-2. PooledDataSource
-   使用PooledConnection封装代理(Jdk动态代理，对close方法进行代理)真正的Connection对象(真正的Connection对象是由封装的UnpooledDataSource创建的)
-   PolledDataSource封装数据库连接池的统计信息
-   使用PoolState管理PooledConnection对象的状态，分别用List存储 空闲和活跃状态的连接，并存储一些关于连接池的统计字段
-   使用线程池 调用代理对象的close方法时，并未真正关闭数据库连接，而是将PooledConnection对象归还给数据库，供之后重用
-   PooledDataSource.getConnection的时候会获取PooledConnection对象，然后getProxyConnection获取数据库连接的代理对象
-   修改数据库配置的时候，会清空所有的连接
+1. `UnpooledDataSource `每次`getConnection`都会获取一个新的连接
+
+2. `PooledDataSource`
+   使用`PooledConnection`封装代理(Jdk动态代理，对`close`方法进行代理，使用线程池 调用代理对象的`close`方法时，并未真正关闭数据库连接，而是将`PooledConnection`对象归还给数据库，供之后重用)
+   
+   真正的`Connection`对象是由封装的`UnpooledDataSource`创建的
+   `PolledDataSource`封装数据库连接池的统计信息
+   使用`PoolState`管理`PooledConnection`对象的状态，分别用List存储 空闲和活跃状态的连接，并存储一些关于连接池的统计字段
+   `PooledDataSource.getConnection`的时候会获取`PooledConnection`对象，然后`getProxyConnection`获取数据库连接的代理对象
+   
+   ![image-20210906191004745](image\获取数据库连接.png)修改数据库配置的时候，会清空所有的连接
 
 #### 2.7 Transaction
 
-org.apache.ibatis.transaction.Transaction 接口
-获取数据库连接 提交事务 回滚事务 关闭数据库连接 获取事务超时时间
+`org.apache.ibatis.transaction.Transaction` 接口的功能：
 
-![Transaction继承关系.png](./image/Transaction继承关系.png)  
-JdbcTransaction JdbcTransactionFactory 依赖Jdbc Connection控制事务的提交和回滚  
-ManagedTransaction ManagedTransactionFactory 依赖容器控制事务的提交回滚  
-TransactionFactory 在指定连接上创建事务对象 或 从指定数据源中获取数据库连接，在连接上创建事务对象
+1. 获取数据库连接 
+2. 提交事务 
+3. 回滚事务 
+4. 关闭数据库连接 
+5. 获取事务超时时间
+
+![Transaction继承关系.png](./image/Transaction继承关系.png)
+`JdbcTransaction JdbcTransactionFactory` 依赖`Jdbc Connection`控制事务的提交和回滚
+
+包含如下字段： 1. 数据库连接 2. 数据库连接所属DataSource 3. 事务隔离级别 4. 是否自动提交
+
+`ManagedTransaction ManagedTransactionFactory` 依赖容器控制事务的提交回滚
+
+`TransactionFactory` 在指定连接上创建事务对象 或 从指定数据源中获取数据库连接，在连接上创建事务对象
 
 #### 2.8 Binding模块
 
-MapperRegistry MapperProxyFactory  
-MapperRegistry 是Mapper接口及其对应的代理对象工厂的注册中心 记录Mapper接口 和 MapperProxyFactory之间的关系  
-在Mybatis初始化时，会读取配置文件以及Mapper接口中的注解信息填充到knownMappers里面，
-key时Mapper接口对应的Class对象，value是MapperProxyFactory工厂对象，为Mapper接口创建代理对象  
-MapperProxyFactory负责创建实现了MapperInterface接口的代理对象
+**MapperRegistry MapperProxyFactory**
 
-MapperProxy  
-实现类InvocationHandler接口，为接口(@Mapper)创建代理对象
+`MapperRegistry` 是Mapper接口及其对应的代理对象工厂的注册中心 记录`Mapper`接口 和 `MapperProxyFactory`之间的关系
 
-**MapperMethod(记录sql语句信息)**  
-封装Mapper接口中对应方法的信息，以及对应的sql语句信息。可以在多个代理对象之间共享  
-一个连接Mapper接口和映射配置文件中定义的sql语句的桥梁  
-execute根据sql语句类型(insert, update...)完成数据库操作并处理返回值(Bean, Map, List, [], void...)
+在`Mybatis`初始化时，会读取配置文件以及`Mapper`接口中的注解信息填充到`Map<Class<?>, MapperProxyFactory<?>> knownMappers`里面，
+`key`是`Mapper`接口对应的`Class`对象，`value`是`MapperProxyFactory`工厂对象，为`Mapper`接口创建代理对象
 
-SqlCommand(内部类)
+`session.getMapper(XXXMapper.class)`获取的是通过jdk动态代理生成的代理对象
 
-1. name记录sql语句的名称(接口名.方法名)
-2. type记录sql语句类型(unknown, select, insert, update, delete, flush)
+`MapperProxyFactory`负责创建实现了`MapperInterface`接口的代理对象
 
-**ParamNameResolver**  
-处理Mapper接口中定义的方法的参数列表  
-SortedMap<Integer, String> names 记录参数列表中的**位置索引**和**参数名称/参数索引**之间的对应关系(第key个位置是第value个参数)  
-RowBounds 和 ResultHandler不会被记录  
-将实参与对应的名称进行关联 Map<String, Object> param {{0, val1}, {param1, val2}, {1, val2}, {param2, val2}}
+**MapperProxy**
+
+实现类InvocationHandler接口，为接口(`@Mapper`)创建代理对象，并进行缓存
+
+**MapperMethod(记录sql语句信息)**
+
+封装Mapper接口中对应方法的信息，以及对应的sql语句信息。完成参数转换和sqk语句的执行功能。不记录任何状态相关的信息，可以在多个代理对象之间共享
+
+一个连接Mapper接口和映射配置文件中定义的sql语句的**桥梁**
+
+核心方法`execute`根据sql语句类型(`insert, update...`)调用`sqlSession`完成数据库操作并处理返回值(`Bean, Map, List, [], void...`)
+
+```
+MapperMethod.rowCountResult -> 处理int类型返回值
+MapperMethod.executeWIthResultHandler -> 使用ResultHandler处理查询结果集(必须指定ResultMap或ResultType)
+MapperMethod.executeForMany -> 处理返回值是Collection或数组类型及其子类(convertToDeclaredCollection进行转换)
+MapperMethod.executeForMap -> 处理返回值是Map类型
+MapperMethod.executeForCursor -> 处理返回值是Cursor类型
+```
+
+**SqlCommand**(内部类，记录sql语句的名称和类型)
+
+1. name记录sql语句的名称(mapper接口名.方法名)
+2. type记录sql语句类型(枚举`unknown, select, insert, update, delete, flush`)
+
+**MethodSignature**(内部类)
+
+封装`Mapper`接口中定义的方法的相关信息
+
+通过多个`boolean`类型变量记录返回值是否为`Collection, Map, void, Cursor`; 
+
+返回值类型
+
+如果返回`map`，记录`key`的名字
+
+记录`RowBounds, ResultHandler`的位置
+
+记录该方法对应的`ParamNameResolver`对象
+
+**ParamNameResolver**
+
+`MethodSignature`中使用`PraamNameResolver`处理`Mapper`接口中定义的方法的参数列表
+
+`SortedMap<Integer, String> names` 记录参数列表中的**位置索引**和**参数名称(如果没有用@Param声明就记录参数索引)**之间的对应关系(第key个位置是第value个参数)
+
+RowBounds 和 ResultHandler不会被记录
+
+将实参与对应的名称进行关联 `Map<String, Object> param {{0, val1}, {param1, val2}, {1, val2}, {param2, val2}}`
 
 ```text
 aMethod(@Param("M") int a, @Param("N") int b) -> {{0, "M"}, {1, "N"}}
@@ -442,51 +489,70 @@ aMethod(int a, int b) -> {{0, "0"}, {1, "1"}}
 aMethod(int a, RowBounds rb, int b) -> {{0, "0"}, {2, "1"}}
 ```
 
-MethodSignature(内部类)  
-封装Mapper接口中定义的方法的相关信息  
-返回值是否为Collection, Map, void, Cursor; 返回值类型  
-如果返回map，记录key的名字  
-记录RowBounds, ResultHandler的位置  
-记录该方法对应的ParamNameResolver对象
-
 #### 2.9 缓存 
 
-org.apache.ibatis.cache.Cache接口  
+`org.apache.ibatis.cache.Cache`接口  
 
-装饰器模式: 动态的为对象添加功能，基于组合的方式实现  
-Cache定义(缓存对象id, 向缓存中加数据, 根据指定key查找缓存项, 删除key对应的缓存项, 清空缓存, 获取缓存个数)  
+**装饰器模式**: 动态的为对象添加功能，基于组合的方式实现
+
+Cache接口中定义的功能：
+
+1. 缓存对象id
+2. 向缓存中加数据
+3. 根据指定key查找缓存项
+4. 删除key对应的缓存项
+5. 清空缓存
+6. 获取缓存个数
+
 Cache中唯一确定一个缓存项是通过缓存项中的key, 使用CacheKey表示(封装多个影响缓存项的因素)
 
-PerpetualCache提供了基本实现，被装饰器装饰的原始对象，其他高级功能通过装饰器添加到该类上面  
-通过HashMap记录缓存项
+`PerpetualCache`提供了基本实现，被装饰器装饰的原始对象，其他高级功能通过装饰器添加到该类上面
 
-org.apache.ibatis.cache.decorators 提供各种装饰器，在PerpetualCache基础上提供额外功能  
+通过`HashMap`记录缓存项
+
+`org.apache.ibatis.cache.decorators` 提供各种装饰器，在PerpetualCache基础上提供额外功能
 通过组合完成特定的需求
 
-BlockingCache保证只有一个线程到数据库中查找指定key对应的数据  
-每个key都有一个ReentrantLock；线程A在BlockingCache中未查找到keyA对应的缓存项时，线程A会获取keyA对应的锁，后续线程在查找keyA时会发生阻塞  
-线程A从数据库中查到keyA对应的结果后，将结果对象放入BlockingCache里面，释放锁，唤醒阻塞在该锁上的线程  
-其他线程可以从BlockingCache中获取数据，不需要重新访问数据库
+1. `BlockingCache`: 保证只有一个线程到数据库中**查找**指定key对应的数据
 
-FifoCache LruCache按照一定的规则清理缓存  
-FifoCache 向缓存中添加数据(Deque LinkedList)时，如果缓存项的个数达到上限，会将缓存中最早进入的缓存项删除  
-LruCache 清空最近最少使用的缓存项(LinkedListHashMap)  
-SoftCache WeakCache  
-ScheduledCache 周期性清理缓存(默认一小时，清空所有缓存项)  
-LoggingCache 提供日志功能 记录命中次数和访问次数，统计命中率  
-SynchronizedCache 用synchronized为Cache添加同步功能
+   每个key都有一个ReentrantLock；线程A在BlockingCache中未查找到keyA对应的缓存项时，线程A会获取keyA对应的锁(通过一个Map记录)，后续线程在查找keyA时会发生阻塞
+
+   线程A从数据库中查到keyA对应的结果后，将结果对象放入BlockingCache里面，释放锁，唤醒阻塞在该锁上的线程
+
+   其他线程可以从BlockingCache中获取数据，不需要重新访问数据库
+
+2. `FifoCache LruCache`: 按照一定的规则清理缓存
+
+   FifoCache 向缓存中添加数据(Deque LinkedList)时，如果缓存项的个数达到上限，会将缓存中最早进入的缓存项删除
+
+   LruCache 清空最近最少使用的缓存项(LinkedListHashMap)
+
+3. `SoftCache WeakCache`
+
+4. `ScheduledCache `周期性清理缓存(默认一小时，清空所有缓存项)
+
+5. `LoggingCache `提供日志功能 记录命中次数和访问次数，统计命中率
+
+6. `SynchronizedCache `用synchronized为Cache添加同步功能
+
+----
 
 以上从缓存中获取同一key对应的对象都是**同一个**，任意一个线程修改后都会影响到其他线程获取的对象
 
-SerializedCache 提供将value对象序列化功能，将序列化后的byte[]作为value存储缓存，取出时反序列化，所以每次获取到的都是新的对象
+----
 
-CacheKey 缓存中的key  
+7. `SerializedCache `提供将value对象序列化功能，将序列化后的byte[]作为value存储缓存，取出时反序列化，所以每次获取到的都是新的对象
+
+**CacheKey** 
+
+唯一确定一个缓存项
+
 可以添加多个对象(存入updateList)，共同决定两个key是否相同
 
-1. MapperStatement的id
-2. 指定查询结果集的范围 RowBounds.offset RowBounds.limit
-3. 查询所使用的sql语句，boundSql.getSql()返回的sql语句，可能包含?占位符
-4. 用户传递给上述sql的实际参数值
+1. **`MapperStatement`的id**
+2. 指定查询**结果集的范围** `RowBounds.offset RowBounds.limit`
+3. 查询所使用的**sql语句**，`boundSql.getSql()`返回的sql语句，可能包含?占位符
+4. 用户传递给上述sql的实际**参数值**
 
 ### 3. 核心处理层
 
