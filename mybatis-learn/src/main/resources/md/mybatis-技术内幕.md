@@ -560,53 +560,92 @@ Cache中唯一确定一个缓存项是通过缓存项中的key, 使用CacheKey�
 
 mybatis的初始化工作
 
-1. 读取 mybatis-config.xml 和 XxxMapper.xml配置文件
-2. 加载配置文件中指定的类，处理类中的注解，创建一些配置对象
+1. 读取 mybatis-config.xml 配置文件
+2.  XxxMapper.xml文件
+3. 加载配置文件中指定的类，处理类中的注解Annotation，创建一些配置对象
 
-建造者模式: 将复杂对象的构建过程和表示分离，同样地构建过程可以创建不同的表示
+建造者(生成器)模式: 将复杂对象的构建过程和表示分离，同样地构建过程可以创建不同的表示
 
-BaseBuilder 接口 定义构造者构造产品对象的各部分行为  
-![BaseBuilder继承关系](./image/BaseBuilder继承关系.png)  
-初始化入口 SqlSessionFactoryBuilder.build() 创建 XMLConfigBuilder 解析配置文件  
+BaseBuilder 接口 定义构造者构造产品对象的各部分行为
+![BaseBuilder继承关系](./image/BaseBuilder继承关系.png) 
+初始化入口 `SqlSessionFactoryBuilder.build()` 创建 `XMLConfigBuilder `解析`mybatis-config.xml`配置文件  
 
-org.apache.ibatis.session.Configuration 初始化过程中创建且全局唯一，MyBatis初始化的核心对象  
-XMLConfigBuilder 负责解析mybatis-config.xml配置文件
+`org.apache.ibatis.session.Configuration` 初始化过程中创建且全局唯一，MyBatis初始化的核心对象
+`XMLConfigBuilder `负责解析`mybatis-config.xml`配置文件
 
-```text
+BaseBuilder中三个字段 
+
+```
+configuration
+typeAliasRegistery
+typeHandlerRegistery
+
+一些枚举类型：
+JdbcType: jdbc类型
+ResultSetType: 结果集类型(FORWARD_ONLY, SCROLL_INSENSITIVE, SCROLL_SENSITIVE)
+ParameterMode: 存储过程的参数类型(in, out, inout)
+```
+
+**XMLConfigBuilder** 
+
+负责解析映射配置文件(mybatis-config.xml)，依次解析如下元素
+
+```
 properties, settings, typeAliases, typeHandlers, objectFactory, objectWrapperFactory, reflectorFactory, plugins, environments, databaseIdProvider, mappers
 ```
 
-**XMLMapperBuilder** 负责解析映射配置文件(XxxMapper.xml)  
-**MapperAnnotationBuilder**
+**XMLMapperBuilder**
+
+解析映射配置文件，依次解析如下元素
 
 ```text
-cache-ref cache resultMap sql select|insert|update|delete
+cache-ref cache parameterMap resultMap sql select|insert|update|delete
 ```
 
-解析cache cache-ref  
-MapperBuilderAssistant 负责创建Cache对象，添加到Configuration.cache(StrictMap<namespace, cache>)中  
-Ambiguity 存在二义性的键值对  
-CacheBuilder 负责建造Cache
+解析`cache cache-ref`如下元素
 
-解析resultMap(定义结果集和结果对象之间的映射规则)  
-ResultMap 每一个<resultMap>标签被解析成一个ResultMap  
-(id, type...)  
-ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系  
+```
+type eviction flushInterval size readOnly blocking
+```
+
+`MapperBuilderAssistant `负责创建Cache对象，添加到`Configuration.caches(StrictMap<namespace, cache>)`中
+
+`Ambiguity `存在二义性的键值对
+
+`CacheBuilder `负责建造Cache
+
+解析resultMap(定义结果集和结果对象之间的映射规则)
+
+ResultMap 每一个<resultMap>标签被解析成一个ResultMap
+
+(id, type...)
+
+ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系
+
 (column, property, javaType, jdbcType, typeHandler)
 
-**XMLStatementBuilder** 负责解析sql节点语句  
-SqlSource 表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)  
-getBoundSql(args) 根据映射文件或注解的sql + 传入的参数返回可执行的sql  
-MappedStatement 表示映射文件中定义的sql节点  
-解析include sql  
+**XMLStatementBuilder** 负责解析sql节点语句
+
+SqlSource 表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)
+
+getBoundSql(args) 根据映射文件或注解的sql + 传入的参数返回可执行的sql
+
+MappedStatement 表示映射文件中定义的sql节点
+
+解析include sql
+
 XMLIncludeTransformer 解析sql语句中的<include>标签(将<include>标签替换成<sql>中定义的片段，并将其中的${xxx}占位符替换成真实的参数)
 
-解析selectKey  
-将<include>和<selectKey>节点解析并删除掉  
+解析selectKey
+
+将<include>和<selectKey>节点解析并删除掉
+
 解析sql节点，添加到Configuration.mappedStatements集合中保存
 
-绑定Mapper接口  
-每个映射文件的命名空间可以绑定一个Mapper接口，并注册到MapperRegistry中  
+绑定Mapper接口
+
+每个映射文件的命名空间可以绑定一个Mapper接口，并注册到MapperRegistry中
+
 XMLMapperBuilder.bindMapperForNamespace方法 完成映射文件和对于Mapper接口的绑定
 
 解析配置文件是按照文件从头到尾按顺序解析的，如果再解析某一个节点时，引用到了定义在之后的节点，会抛出IncompleteElementException  
