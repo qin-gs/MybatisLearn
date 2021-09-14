@@ -459,3 +459,6 @@ InterceptorChain
 缓存：装饰器
 
 建造者：初始化
+
+组合：动态处理sql节点
+

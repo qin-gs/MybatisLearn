@@ -612,112 +612,144 @@ type eviction flushInterval size readOnly blocking
 
 `Ambiguity `存在二义性的键值对
 
-`CacheBuilder `负责建造Cache
+`CacheBuilder `里面存储了缓存的各项配置，使用装饰器建造Cache
+
+`<cache-ref>` 通过`CacheRefResolver`解析，存储共用的两个namespace
 
 解析resultMap(定义结果集和结果对象之间的映射规则)
 
-ResultMap 每一个<resultMap>标签被解析成一个ResultMap
+ResultMap 每一个<resultMap>标签被解析成一个`ResultMap`
 
-(id, type...)
+`ResultMapping` 记录结果集中的一列和JavaBean中的一个属性之间的映射关系
 
-ResultMapping 记录结果集中的一列和JavaBean中的一个属性之间的映射关系
-
-(column, property, javaType, jdbcType, typeHandler)
+(同时还记录了`column, property, javaType, jdbcType, typeHandler`等)
 
 **XMLStatementBuilder** 负责解析sql节点语句
 
-SqlSource 表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)
+`SqlSource `表示映射文件 或 注解中定义的sql语句(可能包含动态sql，占位符)
 
-getBoundSql(args) 根据映射文件或注解的sql + 传入的参数返回可执行的sql
+`getBoundSql(args)` 根据映射文件或注解的sql + 传入的参数返回可执行的sql
 
-MappedStatement 表示映射文件中定义的sql节点
+`MappedStatement `表示映射文件中定义的sql节点(包含SqlSource对应一条sql语句)
 
-解析include sql
+解析`include sql`
 
 XMLIncludeTransformer 解析sql语句中的<include>标签(将<include>标签替换成<sql>中定义的片段，并将其中的${xxx}占位符替换成真实的参数)
 
-解析selectKey
+解析`selectKey`(处理主键自增问题)
 
 将<include>和<selectKey>节点解析并删除掉
 
-解析sql节点，添加到Configuration.mappedStatements集合中保存
+解析sql节点，添加到`Configuration.mappedStatements`集合中保存
 
-绑定Mapper接口
+**绑定Mapper接口**
 
-每个映射文件的命名空间可以绑定一个Mapper接口，并注册到MapperRegistry中
+每个映射文件的命名空间可以绑定一个`Mapper`接口，并注册到`MapperRegistry`中
 
-XMLMapperBuilder.bindMapperForNamespace方法 完成映射文件和对于Mapper接口的绑定
+`XMLMapperBuilder.bindMapperForNamespace`方法 完成映射文件和对于`Mapper`接口的绑定
 
-解析配置文件是按照文件从头到尾按顺序解析的，如果再解析某一个节点时，引用到了定义在之后的节点，会抛出IncompleteElementException  
-根据抛出异常的节点不同放到不同的集合(incomplete*)中
+解析配置文件是按照文件从头到尾按顺序解析的，如果再解析某一个节点时，引用到了定义在之后的节点，会抛出`IncompleteElementException`
 
-3.2 SqlNode SqlSource  
-映射配置文件中的sql节点会被解析成MappedStatement  
-sql语句被解析成SqlSource对象(其中定义动态sql节点，文本节点)，通过解析得到BoundSql对象  
-![SqlSource继承关系](./image/SqlSource继承关系.png)  
-RawSqlSource: 负责处理静态语句  
-DynamicSqlSource: 负责处理动态sql语句，封装的sql需要进行一系列的解析，才能形成数据库可执行的sql  
-上面两种都会将处理好的sql语句封装成StaticSqlSource返回  
-StaticSqlSource: 记录的sql可能包含占位符，但是可以直接交给数据库执行
+根据抛出异常的节点不同放到不同的集合(`incomplete*`使用`parsePending*`方法解析)中，最后还会解析一次
 
-采用组合的设计模式处理动态sql节点，解析成SqlNode，形成树形结构  
-OGNL(object graphic navigation language 对象图导航语言)表达式  
+#### 3.2 SqlNode SqlSource
+
+映射配置文件中的sql节点(`insert|update|delete|select`)会被解析成`MappedStatement`
+
+sql语句被解析成`SqlSource`对象(其中定义动态sql节点，文本节点，封装包含占位符的sql语句和绑定的实参)，通过解析得到BoundSql对象
+
+![SqlSource继承关系](./image/SqlSource继承关系.png)  **RawSqlSource**: 负责处理静态语句
+
+**DynamicSqlSource**: 负责处理动态sql语句，封装的sql需要进行一系列的解析，才能形成数据库可执行的sql
+
+上面两种都会将处理好的sql语句封装成`StaticSqlSource`返回
+
+**StaticSqlSource**: 记录的sql可能包含占位符，但是可以直接交给数据库执行
+
+采用组合的设计模式处理动态sql节点，解析成SqlNode，形成树形结构
+
+**OGNL**(`object graphic navigation language` 对象图导航语言)表达式
+
 存取java对象树中的属性，调用java对象树中的方法等
 
-DynamicContext  
-记录解析动态sql语句之后产生的sql语句片段，一个用于记录动态sql语句解析结果的容器，当sql中的所有节点解析完成后，可以从中获取一条动态生成的sql语句  
-SqlNode 解析对应的动态sql节点  
+**DynamicContext**
+
+记录解析动态sql语句之后产生的sql语句片段，一个用于记录动态sql语句解析结果的容器，当sql中的所有节点解析完成后(`appendSql`)，可以从中获取(`getSql`)一条动态生成的sql语句
+
+同时也需要记录用户传入的参数(`ContextMap`)，用来替换`#{}`占位符
+
+**SqlNode**
+
+解析对应的动态sql节点，生成一条完整的sql语句
+
+1. `StaticTextSqlNode`: 记录非动态sql语句，可以直接追加到sql上面
+2. `MixedSqlNode`: 使用List<SqlNode>记录子节点，循环将集合中的子节点组合到sql上面
+3. `TextSqlNode`: 包含占位符的动态sql节点，会将占位符替换成用户传递的实际参数，然后追加到sql上面
+4. `IfSqlNode`: if节点，检测test表达式的值(ognl表达式)，根据结果决定是否添加到sql上面
+5. `TrimSqlNode, WhereSqlNode, SetSqlNode`: 根据子节点的解析结果，添加或删除前缀后缀
+6. `ForeachSqlNode`: 处理前后缀，遍历集合添加分隔符，将`#{item} -> #{__frc_item_0}`
+7. `ChooseSqlNode`: 遍历ifSqlNode判断是否添加语句，最后判断是否添加defaultSqlNode
+8. `VarDeclSqlNode`: 动态sql中的bind节点，
+
 ![SqlNode继承关系](./image/SqlNode继承关系.png)
 
-SqlSourceBuilder
+**SqlSourceBuilder**
 
-1. 解析sql语句中的占位符(#{__frc_item_0, javaType=int, jdbcType=NUMERIC, typeHandler=MyTypeHandler.class})定义的属性
-2. 将sql语句中的占位符替换成?
+1. 解析sql语句中的占位符(`#{__frc_item_0, javaType=int, jdbcType=NUMERIC, typeHandler=MyTypeHandler.class}`)定义的属性
+2. 将sql语句中的占位符`#{}`替换成`?`
 
-ParameterMappingTokenHandler 解析#{}占位符中的参数属性 以及替换占位符  
-ParameterMapping 记录#{}占位符中的参数属性  
+处理后的sql语句， 用户传入的实参类型， 形参和实参的对应关系
+
+`ParameterMappingTokenHandler` 解析`#{}`占位符中的参数属性 以及替换占位符
+
+`ParameterMapping` 记录#{}占位符中的参数属性(名称，java类型，TypeHandler，ResultMap等)
+
 **BoundSql** 记录sql语句 和 参数
 
-DynamicSqlSource 负责解析动态sql语句  
-SqlSourceBuilder
+**DynamicSqlSource** 负责解析动态sql语句(组合模式)
 
-RawSqlSource
+​    SqlSourceBuilder解析参数属性，将sql中的`#{}`替换成`?`
 
-XmlScriptBuilder中判断sql节点是否为动态的  
-如果某个节点只包含${}占位符，不包含动态sql节点或未解析的${}占位符，则不是动态语句 创建 StaticSqlSource 对象  
-如果整个节点不是动态的sql节点，创建 RawSqlSource 对象
+**RawSqlSource**: 处理只包含#{}，不包含${}和动态节点的语句
 
-3.3 ResultSetHandler  
-StatementHandler接口在执行完指定的select语句之后，将查询到的结果交给ResultSetHandler完成映射处理 或 处理存储过程执行后的输出参数  
-DefaultResultSetHandler 是唯一实现  
-handleResultSets() // 处理Statement, PreparedStatement产生的结果集，还可以处理CallableStatement调用存储过程产生的多结果集(select resultSets="
-user,blog")
+`XmlScriptBuilder`中判断sql节点是否为动态的
+
+如果某个节点只包含${}占位符，不包含动态sql节点或未解析的${}占位符，则不是动态语句 创建 `StaticSqlSource `对象
+
+如果整个节点不是动态的sql节点，创建 `RawSqlSource `对象
+
+#### 3.3 ResultSetHandler
+
+`StatementHandler`接口在执行完指定的select语句之后，将查询到的结果交给`ResultSetHandler`完成映射处理 或 处理存储过程执行后的输出参数
+
+`DefaultResultSetHandler`是唯一实现
+
+`handleResultSets() `// 处理`Statement, PreparedStatement`产生的结果集，还可以处理`CallableStatement`调用存储过程产生的多结果集(`select resultSets="user,blog"`)
 
 ```xml
-
-<div>
-    <select id="selectBlog" resultSets="blog,authors" resultMap="blogResult" statementType="CALLABLE">
-        { call getBlogsAuthors(#{id, jdbcType=INTEGER, mode=IN}) }
-    </select>
-    <resultMap id="blogResult" type="Blog">
-        <constructor>
-            <idArg column="id" javaType="int"/>
-        </constructor>
-        <result property="title" column="title"/>
-        <association property="author" javaType="Author" resuoltSet="authors" column="author_id" foreignCOlumn="id">
-            <id property="id" column="id"/>
-            <result property="username" column="username"/>
-            <result property="password" column="password"/>
-        </association>
-    </resultMap>
-</div>
-
+<select id="selectBlog" resultSets="blog,authors" resultMap="blogResult" statementType="CALLABLE">
+    { call getBlogsAuthors(#{id, jdbcType=INTEGER, mode=IN}) }
+</select>
+<resultMap id="blogResult" type="Blog">
+    <constructor>
+        <idArg column="id" javaType="int"/>
+    </constructor>
+    <result property="title" column="title"/>
+    <association property="author" javaType="Author" resuoltSet="authors" column="author_id" foreignCOlumn="id">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+    </association>
+</resultMap>
 ```
 
-ResultSetWrapper  
-将从数据库中查询得到的ResultSet对象封装成ResultSetWrapper然后进行处理  
-ResultSetWrapper记录了ResultSet中的一些元数据，并提供一系列操作ResultSet的辅助方法  
-记录了了每列的(列名，java类型，jdbc类型，TypeHandler对象(Map)，被映射的列名，未映射的列名)
+**ResultSetWrapper**
+
+`DefaultResultSetHandler`会将从数据库中查询得到的`ResultSet`对象封装成`ResultSetWrapper`进行处理
+
+`ResultSetWrapper`记录了`ResultSet`中的一些元数据，并提供一系列操作`ResultSet`的辅助方法
+
+记录了(ReesultSet对象本身，所有列名，java类型，jdbc类型，TypeHandler对象(Map)，被映射的列名，未映射的列名)
 
 单个ResultSet的映射
 
