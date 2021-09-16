@@ -751,21 +751,47 @@ sql语句被解析成`SqlSource`对象(其中定义动态sql节点，文本节�
 
 记录了(ReesultSet对象本身，所有列名，java类型，jdbc类型，TypeHandler对象(Map)，被映射的列名，未映射的列名)
 
-单个ResultSet的映射
+**单个ResultSet的映射**
 
-DefaultResultSetHandler.handleResultSet -> handleRowValues -> handleRowValuesForSimpleResultMap
+`DefaultResultSetHandler.handleResultSet -> handleRowValues(判断是否进行嵌套映射处理) -> handleRowValuesForSimpleResultMap(不含嵌套映射)`
 
-1. 调用skipRows()方法，根据RowBounds中的offset 值定位到指定的记录行.
-2. 调用shouldProcessMoreRows()方法，检测是否还有需要映射的记录.
-3. 通过resolveDiscriminatedResultMap()方法，确定映射使用的ResultMap对象.
-4. 调用getRowValue()方法对ResultSet中的一行记录进行映射:
-    1. 通过createResultObject()方法创建映射后的结果对象.
-    2. 通过shouldApplyAutomaticMappings()方法判断是否开启了自动映射功能.
-    3. 通过applyAutomaticMappings()方法自动映射ResultMap中未明确映射的列.
-    4. 通过applyPropertyMappings()方法映射ResultMap中明确映射列，到这里该行记录的数据已经完全映射到了结果对象的相应属性中.
-5. 调用storeObject()方法保存映射得到的结果对象.
+1. 调用`skipRows`方法，根据`RowBounds`中的`offset `值定位到指定的记录行(就是多次调用`rs.next()`方法).
 
-ResultHandler  
+2. 调用`shouldProcessMoreRows`方法，检测是否还有需要映射的记录.
+
+3. 通过`resolveDiscriminatedResultMap`方法，根据`ResultMap`中的`Discriminator`(`<discriminator>`节点会生成一个该对象记录到`ResultMap`中，不生成`ResultMapping`对象)和参与映射的列值确定映射使用的`ResultMap`对象(可能嵌套多层).
+
+4. 调用`getRowValue`方法对`ResultSet`中的一行记录进行映射:
+    1. 通过`createResultObject`方法根据结果集的列数等信息创建不同的映射后的结果对象(`MetaObject`).
+
+       有多种情况
+
+       1. 结果集只有一列且存在`TypeHandler`，直接转换成对应的`java`类型
+       2. `ResultMap`中使用了构造函数，用反射调用构造函数创建对象(涉及嵌套查询和嵌套映射的处理)
+       3. 使用默认无参构造函数
+       4. 如果`<resultMap>`没有指定构造函数且没有无参构造函数，通过自动映射的方式查找合适的构造函数创建对象
+
+    2. 通过`shouldApplyAutomaticMappings`方法判断是否开启了自动映射功能.
+
+       自动映射功能两个地方可以配置：
+
+       1. `<resultMap autoMapping='partial'>`
+       2. setting中的`autoMappingBehavior`
+
+    3. 通过`applyAutomaticMappings`方法自动映射`ResultMap`中未明确映射的列.
+
+    4. 通过`applyPropertyMappings`方法映射`ResultMap`中明确指定需要映射的列，到这里该行记录的数据已经完全映射到了结果对象的相应属性中(如果没有映射成功任何属性，根据配置(`returnInstanceForEmptyRow`)决定是返回null还是空对象).
+
+5. 调用`storeObject`方法保存映射得到的结果对象.
+
+过程中使用到的类：
+
+1. `DefaultResultHandler `extends ResultHandler，使用list暂存映射得到的结果对象
+2. `DefaultMapResultHandler` extends ResultHandler，使用map暂存结果对象
+3. `DefaultResultContext` extends ResultContext 用来暂存映射后的结果对象和对象个数
+
+ResultHandler
+
 select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的情形下使用  
 `void handleResult(ResultContext<? extends T> resultContext);`  
 ResultHandler 参数允许自定义每行结果的处理过程。可以将它添加到 List 中、创建 Map 和 Set，甚至丢弃每个返回值，只保留计算后的统计结果  
