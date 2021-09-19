@@ -1,21 +1,16 @@
 package com.learn.config;
 
 import com.learn.anno.MyMapperScan;
-import com.learn.processor.MyImportBeanDefinitionRegistrar;
 import org.mybatis.spring.SqlSessionFactoryBean;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
 
 @Configuration
-// @MyMapperScan
-// @MapperScan("com.learn.dao")
-@Import(MyImportBeanDefinitionRegistrar.class)
+@MyMapperScan
 @ComponentScan("com.learn")
 public class MyConfig {
 
