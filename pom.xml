@@ -19,6 +19,7 @@
     <modules>
         <module>mybatis-learn</module>
         <module>mybatis-plus-learn</module>
+        <module>mybatis-spring</module>
     </modules>
 
     <properties>
