@@ -9,20 +9,23 @@ import java.util.Collections;
 
 /**
  * 使用FactoryBean自己创建代理对象，不通过spring创建，需要将被创建的对象传进来
+ * <p>
+ * <a href="https://mybatis.org/spring/zh/factorybean.html">文档</a>
  */
+@SuppressWarnings("unchecked")
 public class MyMapperFactoryBean<T> implements FactoryBean<T> {
-    private Class<T> clazz;
+    private Class<T> mapperInterface;
 
     public MyMapperFactoryBean(Class<T> clazz) {
-        this.clazz = clazz;
+        this.mapperInterface = clazz;
     }
 
     @Override
     public T getObject() throws Exception {
         // 生成代理对象
-        T t = (T) Proxy.newProxyInstance(
+        return (T) Proxy.newProxyInstance(
                 MyMapperFactoryBean.class.getClassLoader(),
-                new Class[]{clazz},
+                new Class[]{mapperInterface},
                 (proxy, method, args) -> {
                     Select select = method.getAnnotation(Select.class);
                     String[] sqls = select.value();
@@ -31,11 +34,10 @@ public class MyMapperFactoryBean<T> implements FactoryBean<T> {
                     return Collections.emptyList();
                 }
         );
-        return t;
     }
 
     @Override
     public Class<T> getObjectType() {
-        return clazz;
+        return mapperInterface;
     }
 }
