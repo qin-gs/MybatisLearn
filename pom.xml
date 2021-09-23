@@ -19,6 +19,7 @@
     <modules>
         <module>mybatis-learn</module>
         <module>mybatis-plus-learn</module>
+        <module>mybatis-spring</module>
     </modules>
 
     <properties>
@@ -73,6 +74,13 @@
                 <artifactId>spring-boot-starter-test</artifactId>
                 <version>2.5.0</version>
                 <scope>test</scope>
+                <!--排除junit4-->
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.junit.vintage</groupId>
+                        <artifactId>junit-vintage-engine</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -84,13 +92,6 @@
                 <groupId>org.mybatis</groupId>
                 <artifactId>mybatis-spring</artifactId>
                 <version>2.0.6</version>
-            </dependency>
-
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.12</version>
-                <scope>test</scope>
             </dependency>
 
             <dependency>
