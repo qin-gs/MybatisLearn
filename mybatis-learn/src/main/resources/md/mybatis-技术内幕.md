@@ -792,47 +792,81 @@ sql语句被解析成`SqlSource`对象(其中定义动态sql节点，文本节�
 
 ResultHandler
 
-select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的情形下使用  
-`void handleResult(ResultContext<? extends T> resultContext);`  
-ResultHandler 参数允许自定义每行结果的处理过程。可以将它添加到 List 中、创建 Map 和 Set，甚至丢弃每个返回值，只保留计算后的统计结果  
-ResultContext 参数允许你访问结果对象和当前已被创建的对象数目(使用带 ResultHandler 参数的方法时，收到的数据不会被缓存)
+select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的情形下使用
+
+`void handleResult(ResultContext<? extends T> resultContext);`
+
+`ResultHandler `参数允许自定义每行结果的处理过程。可以将它添加到 List 中、创建 Map 和 Set，甚至丢弃每个返回值，只保留计算后的统计结果
+
+`ResultContext `参数允许你访问结果对象和当前已被创建的对象数目(使用带 ResultHandler 参数的方法时，收到的数据不会被缓存)
 
 ![ResultHandler继承关系](./image/ResultHandler继承关系.png)  
-DefaultResultHandler: 使用List暂存的结果  
-DefaultMapResultHandler: 使用Map暂存结果
+`DefaultResultHandler`: 使用List暂存的结果
+`DefaultMapResultHandler`: 使用Map暂存结果
 
-DefaultResultContext  
+`DefaultResultContext`
 暂存映射后的结果对象，对象个数，是否停止映射三个字段
 
-嵌套映射
+**嵌套映射**
 
-嵌套查询 延迟加载  
-延迟加载(fetchType, lazyLoadingEnabled)：暂时不用的对象不会真正载入到内存中，真正使用改对象时，才去执行数据库查询操作，将该对象加载到内存中  
-MyBatis中，如果一个对象的某个属性需要延迟加载，在映射该属性时，会为该属性创建相应的代理对象并返回  
-aggressiveLazyLoading(default=false): true表示有延迟加载属性的对象在被调用，将完全加载其属性，否则将按需要加载属性  
-延迟加载通过动态代理实现，由于bean没有实现任何接口，无法使用JDK动态代理，MyBatis中采用的是CGLIB和JAVASSIST  
-cglib采用字节码技术实现动态代理功能，通过字节码技术为目标类生成一个子类，在该类中采用方法拦截的方式拦截父类方法的调用，实现代理功能  
-(无法代理final修饰的方法)    
-Javassist动态修改类结构，或动态生成类
+// TODO
 
-ResultLoader ResultLoaderMap  
-ResultLoader 负责保存一次延迟加载操作所需的全部信息  
-loadResult 通过excutor执行resultLoader中记录的sql语句返回相应的延迟加载对象
+**嵌套查询 延迟加载**
+
+延迟加载(fetchType, lazyLoadingEnabled)：暂时不用的对象不会真正载入到内存中，真正使用改对象时，才去执行数据库查询操作，将该对象加载到内存中。MyBatis中，如果一个对象的某个属性需要延迟加载，在映射该属性时，会为该属性创建相应的**代理对象**并返回，真正要使用延迟加载的属性时，才会通过代理对象执行数据库的加载操作，获取真正的数据。
+
+配置方式
+
+1. `<resultMap fetchType="lazy">`
+
+2. 配置mybatis-config.xml: `<setting name="lazyLoadingEnabled" value="true">`
+
+   将积极加载改为按需加载：`aggressiveLazyLoading(default=false)`: true表示有延迟加载属性的对象在被调用，将完全加载其属性，否则将按需要加载属性
+
+延迟加载通过动态代理实现，由于bean没有实现任何接口，无法使用JDK动态代理，MyBatis中采用的是CGLIB和JAVASSIST
+
+1. cglib采用字节码技术实现动态代理功能，通过字节码技术为目标类生成一个子类，在该类中采用方法拦截的方式拦截父类方法的调用，实现代理功能 (无法代理final修饰的方法) 
+
+2. Javassist动态修改类结构，或动态生成类
+
+   
+
+**ResultLoader & ResultLoaderMap(与延迟加载相关)**
+
+ResultLoader 负责保存一次延迟加载操作所需的全部信息
+
+`loadResult()` 通过Excutor对象执行ResultLoader对象中记录的sql语句返回相应的延迟加载对象
 
 ```text
-Configuration对象，用于执行延迟加载操作的Executor对象，延迟执行的sql语句和相关配置信息，sql的实参，延迟加载得到的对象类型，
-延迟加载得到的结果对象，将延迟加载得到的结果对象转换成目标类型，ObjectFactory工厂对象 通过反射创建延迟加载的Java对象，
-CacheKey，创建ResultLoader的线程id  
+Configuration对象
+用于执行延迟加载操作的Executor对象
+延迟执行的sql语句和相关配置信息
+sql的实参
+延迟加载得到的对象类型
+延迟加载得到的结果对象
+将延迟加载得到的结果对象转换成目标类型
+ObjectFactory工厂对象
+通过反射创建延迟加载的Java对象
+CacheKey
+创建ResultLoader的线程id
+
+执行延迟加载()，得到结果对象(List<Object>)以List的形式返回，将List集合转换成指定类型(Collection, Array, bean...)的对象
 ```
 
-ResultLoaderMap  
-使用Map<String, LoadPair>保存对象中延迟加载属性和对应的ResultLoader对象  
-key是转换成大写的属性名，value是LoadPair(内部类)  
-load 加载指定名称的属性  
-loadAll 加载对象中全部的延迟加载属性  
+ResultLoaderMap
+
+使用`Map<String, LoadPair>`保存对象中延迟加载属性和对应的`ResultLoader`对象
+
+​	key是转换成大写的属性名，value是LoadPair(内部类)
+
+`load() `加载指定名称的属性
+
+`loadAll() `加载对象中全部的延迟加载属性(也就是map中的全部属性)
+
 将加载得到的嵌套对象设置到外层对象中
 
-org.apache.ibatis.executor.loader.ProxyFactory 创建代理对象  
+**org.apache.ibatis.executor.loader.ProxyFactory** 创建代理对象(两种方式)
+
 ![ProxyFactory继承关系](./image/ProxyFactory继承关系.png)
 
 1. CglibProxyFactory 使用内部类 EnhancedResultObjectProxyImpl(MethodInterceptor).createProxy创建对象，创建过程中intercept会

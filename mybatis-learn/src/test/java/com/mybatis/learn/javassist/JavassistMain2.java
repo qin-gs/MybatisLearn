@@ -4,6 +4,9 @@ import javassist.util.proxy.ProxyFactory;
 
 import java.lang.reflect.Method;
 
+/**
+ * 为JavassistMain创建出来的类创建目标类实现动态代理功能
+ */
 public class JavassistMain2 {
 	public static void main(String[] args) throws Exception {
 		ProxyFactory factory = new ProxyFactory();
@@ -22,7 +25,7 @@ public class JavassistMain2 {
 
 		// 创建代理类，代理对象
 		Class<?> c = factory.createClass();
-		JavassistTest test = ((JavassistTest) c.newInstance());
+		JavassistTest test = ((JavassistTest) c.getDeclaredConstructor().newInstance());
 		// 执行方法，会被拦截
 		test.execute();
 		System.out.println(test.getProp());
