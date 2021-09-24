@@ -37,9 +37,10 @@ public class OgnlTest {
         comments.add(comment);
         blog.setComments(comments);
 
-        context = new OgnlContext();
-        context.put("blog", blog);
-        context.setRoot(blog);
+        // mybatis版本升级后无参构造函数不可用
+        // context = new OgnlContext();
+        // context.put("blog", blog);
+        // context.setRoot(blog);
     }
 
     public static void main(String[] args) throws OgnlException {

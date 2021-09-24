@@ -835,7 +835,7 @@ select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的
 
 ResultLoader 负责保存一次延迟加载操作所需的全部信息
 
-`loadResult()` 通过Excutor对象执行ResultLoader对象中记录的sql语句返回相应的延迟加载对象
+`loadResult()` 通过Executor对象执行ResultLoader对象中记录的sql语句返回相应的延迟加载对象
 
 ```text
 Configuration对象
@@ -869,23 +869,31 @@ ResultLoaderMap
 
 ![ProxyFactory继承关系](./image/ProxyFactory继承关系.png)
 
-1. CglibProxyFactory 使用内部类 EnhancedResultObjectProxyImpl(MethodInterceptor).createProxy创建对象，创建过程中intercept会
-   根据当前调用的方法名称，决定是否触发对延迟加载的属性进行加载；实现WriteReplaceInterface接口
+1. CglibProxyFactory 使用内部类 EnhancedResultObjectProxyImpl(MethodInterceptor).createProxy创建对象，创建过程中intercept会根据当前调用的方法名称，决定是否触发对延迟加载的属性进行加载；实现WriteReplaceInterface接口
 2. JavassistProxyFactory 实现MethodHandler接口
 
-DefaultResultSetHandler 中的延迟加载 和 嵌套查询  
-createParameterizedResultObject 获取<resultMap>中配置的构造函数和参数值，选择合适的构造函数创建结果对象  
-如果某个构造函数中是通过嵌套查询获取的，则需要通过getNestedQueryConstructorValue创建该参数值  
+**DefaultResultSetHandler** 中的延迟加载 和 嵌套查询
+
+`createParameterizedResultObject` 获取<resultMap>中配置的构造函数和参数值，选择合适的构造函数**创建结果对象**
+
+如果某个构造函数中是通过嵌套查询获取的，则需要通过`getNestedQueryConstructorValue`创建该参数值
+
 在创建构造函数的参数时涉及的嵌套查询，无论配置如何，都不会延迟加载；在其他属性的嵌套查询中，才会有延迟加载的处理逻辑
 
-多结果集处理  
-游标  
-输出类型的参数(存储过程)
+**多结果集处理**
 
-KeyGenerator  
-获取插入记录时产生的自增主键  
-oarcle, db2 等是通过sequence实现自增的，在执行insert之前必须明确指定主键的值  
-mysql, postgresql 等在执行sql时，可以不指定主键，在插入过程中由数据库自动生成自增主键    
+**游标**
+
+**输出类型的参数(存储过程)**
+
+#### 3.4 KeyGenerator
+
+获取插入记录时产生的自增主键
+
+oracle, db2 等是通过sequence实现自增的，在执行insert之前必须明确指定主键的值
+
+mysql, postgresql 等在执行sql时，可以不指定主键，在插入过程中由数据库自动生成自增主键
+
 ![KeyGenerator继承关系](./image/KeyGenerator继承关系.png)
 
 ```text
@@ -896,12 +904,14 @@ processBefore // 在执行insert之前执行，设置属性order="BEFORE"
 processAfter // 在执行insert之后执行，设置属性order="AFTER"
 ```
 
-1. Jdbc3KeyGenerator  
+1. Jdbc3KeyGenerator
+   
    用于**取回**数据库生成的自增id，只实现了processAfter方法
-
+   
 2. SelectKeyGenerator MyBatis提供来**生成**主键，执行<selectKey>节点的sql语句，获取insert语句需要的主键并映射成对象，按照配置，将主键对象中对应的属性设置到用户参数中
 
-3.5 StatementHandler  
+#### 3.5 StatementHandler
+
 功能：创建Statement，为sql语句绑定实参，执行select、insert等多种类型的sql语句，批量执行sql，将结果集映射成对象  
 ![StatementHandler继承关系](./image/statementhandler-继承关系.jpg)
 

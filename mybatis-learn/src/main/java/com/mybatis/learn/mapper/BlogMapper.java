@@ -26,7 +26,7 @@ public interface BlogMapper {
 
 	User selectUserById(@Param("id") String id);
 
-	User selectUserByBlogId(String id);
+	User selectUserByBlogId(@Param("id") String id);
 
 	@Select(value = {
 			"<script>",
