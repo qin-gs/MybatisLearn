@@ -901,78 +901,116 @@ processAfter // 在执行insert之后执行，设置属性order="AFTER"
 
 2. SelectKeyGenerator MyBatis提供来**生成**主键，执行<selectKey>节点的sql语句，获取insert语句需要的主键并映射成对象，按照配置，将主键对象中对应的属性设置到用户参数中
 
-3.5 StatementHandler  
-功能：创建Statement，为sql语句绑定实参，执行select、insert等多种类型的sql语句，批量执行sql，将结果集映射成对象  
+#### 3.5 StatementHandler
+
+功能：
+
+1. 创建Statement
+2. 为sql语句绑定实参
+3. 执行select、insert等多种类型的sql语句
+4. 批量执行sql
+5. 将结果集映射成对象
+
 ![StatementHandler继承关系](./image/statementhandler-继承关系.jpg)
 
-1. RoutingStatementHandler(**装饰器/策略**)：根据MappedStatement中指定的statementType字段，创建对应的StatementHandler接口实现
-2. BaseStatementHandler：提供参数绑定相关的方法(将传入的实参替换sql语句中的'?')，没有实现操作数据库的方法
+1. `RoutingStatementHandler`(**装饰器/策略**)：根据`MappedStatement`中指定的`statementType`字段，创建对应的`StatementHandler`接口实现，设置到`delegage`中
+2. `BaseStatementHandler`：提供参数绑定相关的方法(`ParameterHandler`将传入的实参替换sql语句中的`?`；`ResultSetHandler`将结果集映射成对象；sql语句对应的`MappedStatement`, `BoundSql`；`Executor`；`offset, limit`)，没有实现操作数据库的方法，会初始化sql的主键
 
 ```text
-   ParameterHandler  
-   只有一个方法 setParameters，一个实现类DefaultParameterHandler
-   遍历BoundSql.parameterMappings集合中记录的ParameterMapping对象，根据其中记录的参数名称查找相应实参，然后与sql语句绑定
+ParameterHandler  
+只有一个方法 setParameters，一个实现类DefaultParameterHandler
+遍历BoundSql.parameterMappings集合中记录的ParameterMapping对象，根据其中记录的参数名称查找相应实参，然后与sql语句绑定
 ```
 
-3. SimpleStatementHandler：使用java.sql.Statement完成数据库相关操作，所有sql语句中不能存在占位符  
-   通过JDBC Connection创建Statement对象，通过query完成数据库查询操作，通过ResultSetHandler将结果集映射成对象
+3. `SimpleStatementHandler`：使用`java.sql.Statement`完成数据库相关操作，所有sql语句中不能存在占位符，通过`JDBC Connection`创建`Statement`对象，通过`query`完成数据库查询操作，通过`ResultSetHandler`将结果集映射成对象
+   
+4. `PreparedStatementHandler`：使用`java.sql.PreparedStatement`对象完成数据库的相关操作
+5. `CallableStatementHandler`：使用`java.sql.CallableStatement`调用指定存储过程
 
-4. PreparedStatementHandler：使用java.sql.PreparedStatement对象完成数据库的相关操作
-5. CallableStatementHandler：使用java.sql.CallableStatement调用指定存储过程
+#### 3.6 Executor 
 
-3.6 org.apache.ibatis.executor.Executor 接口(模板+装饰器)  
-定义操作数据库的基本方法  
-执行update, insert, delete类型的语句，批量执行sql，提交/回滚事务，查找缓存，关闭Executor对象等  
-![Executor继承关系](./image/Executor继承关系.png)  
-模板策略：一个算法分为多个步骤，这些步骤的执行次序在一个被成为'模板方法'的方法中定义，算法的每个步骤对应着一个方法，被成为基本方法。
+采用接口(模板+装饰器)，定义操作数据库的基本方法
+
+执行update, insert, delete类型的语句，批量执行sql，提交/回滚事务，查找缓存，关闭Executor对象
+![Executor继承关系](./image/Executor继承关系.png)
+**模板**：一个算法分为多个步骤，这些步骤的执行次序在一个被成为'模板方法'的方法中定义，算法的每个步骤对应着一个方法，被成为基本方法。
+
 模板方法按照定义的顺序依次调用多个基本方法，完成整个流程。在模板方法的模板中，将模板方法的实现以及那些固定不变的基本方法的实现放在父类中， 不固定的基本方法在父类中只是抽象方法，真正的实现被延迟到子类中。
 
-1. BaseExecutor  
-   实现了大部分方法(四个未实现doUpdate, doQuery, doQueryCursor, doFlushStatement)，主要提供**缓存管理**和**事务管理**的基本功能  
-   **一级缓存**：会话级别的，默认开启，每创建一个SqlSession表示开启一次会话，生命周期与SqlSession相同(也就是SqlSession中封装的Executor生命周期相同)  
-   query方法：首先创建CacheKey对象，根据CacheKey对象查找以及缓存，如果命中缓存就返回缓存中记录的结果对象，如果没有命中就查询数据库获取结果集， 之后将结果集映射成结果对象保存到一级缓存中，同时返回结果对象。  
-   CacheKey(缓存中的key，可以添加多个对象(存入updateList)，共同决定两个key是否相同)  
-   加入的对象：MappedStatement的id，offset和limit，包含?的sql语句，用户传递的实参，Environment的id 五部分组成
-    1. 缓存查询到的结果对象
-    2. 嵌套查询时，如果一级缓存中缓存了嵌套查询的结果对象，则直接获取；如果一级缓存中记录嵌套查询的结果对象没有完全加载，通过DeferredLoad实现延迟加载
+1. **BaseExecutor**
+   
+   实现了大部分方法(四个未实现`doUpdate, doQuery, doQueryCursor, doFlushStatement`)，主要提供**缓存管理**和**事务管理**的基本功能
+   
+   **一级缓存**：会话级别的，默认开启，每创建一个`SqlSession`表示开启一次会话，生命周期与`SqlSession`相同(也就是`SqlSession`中封装的`Executor`生命周期相同)
+   
+   `query`方法：首先创建`CacheKey`对象，根据`CacheKey`对象查找以及缓存，如果命中缓存就返回缓存中记录的结果对象，如果没有命中就查询数据库获取结果集， 之后将结果集映射成结果对象保存到一级缓存中，同时返回结果对象。
+   
+   `CacheKey`(缓存中的`key`，可以添加多个对象(存入`updateList`)，共同决定两个key是否相同)
+   
+   加入的对象：
+   
+   1. MappedStatement的id
+   2. offset和limit
+   3. 包含?的sql语句
+   4. 用户传递的实参
+   5. Environment的id 五部分组成
+   
+   一级缓存的两个功能：
+   
+    1. 缓存查询到的结果对象，直接加载结果
+    2. 嵌套查询时，如果一级缓存中缓存了嵌套查询的结果对象，则直接获取；如果一级缓存中记录嵌套查询的结果对象没有完全加载，通过`DeferredLoad`实现延迟加载
    ```text
-    isCached 检测是否缓存的指定查询的结果对象
-    deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
+   isCached 检测是否缓存的指定查询的结果对象
+   deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
    ```
-   DeferredLoad(内部类)负责从localCache缓存中延迟加载结果对象
-
-    ```text
-    DeferredLoad.canLoad方法负责检测缓存项是否完全到了缓存中
+   `DeferredLoad`(内部类)负责从`localCache`缓存中延迟加载结果对象
+   
+   ```text
+    DeferredLoad.canLoad方法负责检测缓存项是否完全加载到了缓存中
         1. 检测缓存是否存在指定的结果对象
         2. 检测是否为占位符
+    
+    完全加载：
     BaseExecutor.queryFromDatabase方法
-        1. 开始调用doQuery方法查询数据库之前，会先在localCache中添加占位符，
+        1. 开始调用doQuery方法查询数据库之前，会先在localCache中添加占位符
         2. 完成数据库查询操作，返回结果对象
         3. 删除占位符
         3. 查询完成之后，将真正的结果放到一级缓存localCache中，返回数据
-    ```
-
-   最外层查询结束，所有的嵌套查询结束，相关缓存项也已经完全加载后触发DeferredLoad加载一级缓存中记录的嵌套查询的结果对象， 加载完成后清空(flushCache,
-   localCacheScope两个配置决定是否清空一级缓存)  
+    
+    DeferredLoad.load
+    	1. 从缓存中查询指定的结果对象
+    	2. 将缓存的结果对象转换成指定类型
+    	3. 设置到外层对象的指定属性
+   ```
+   
+   最外层查询结束，所有的嵌套查询结束，相关缓存项也已经完全加载后触发`DeferredLoad`加载一级缓存中记录的嵌套查询的结果对象， 加载完成后清空`deferredLoads`集合(`flushCache, localCacheScope`两个配置决定是否清空一级缓存)
+   
    deferredLoads集合 update方法：执行insert, update, delete三类sql，调用doUpdate模板方法实现，调用之前清空缓存(因为执行sql之后一级缓存中的数据和数据库中的数据已经不一致了(
-   肮数据))  
-   **事务相关**：BatchExecutor可以缓存多条sql，然后等待合适的时机将多条sql一起发送到数据库执行(flushStatements方法会在commit/rollback方法之前被调用)  
+   肮数据))
+   
+   **事务相关**：BatchExecutor可以缓存多条sql，然后等待合适的时机将多条sql一起发送到数据库执行(flushStatements方法会在commit/rollback方法之前被调用)
+   
    commit/rollback方法：先清空一级缓存，再flushStatements方法，最后根据参数决定是否真正提交事务
+   
+2. SimpleExecutor
 
-2. SimpleExecutor  
-   继承BaseExecutor，不提供批量处理sql语句功能，采用模板方法，只需要专注四个基本方法的实现  
+   继承BaseExecutor，不提供批量处理sql语句功能，采用模板方法，只需要专注四个基本方法的实现
+
    query:
+
     1. 获取Configuration配置对象
     2. 创建StatementHandler对象，实际返回RoutingStatementHandler对象(根据MappedStatement.statementType选择具体的StatementHandler实现)
     3. 完成Statement的创建和初始化，并处理占位符
     4. 调用StatementHandler.query方法，执行sql，并通过ResultSetHandler完成结果集映射
     5. 关闭Statement对象
 
-3. ReuseExecutor  
+3. ReuseExecutor
+
    提供重用Statement功能，通过Map<sql语句, Statement>缓存使用过的Statement对象  
    与SimpleExecutor不同的是prepareStatement方法；  
    SimpleExecutor每次都会通过JDBC Connection重新创建Statement对象  
    ReuseExecutor会尝试重用缓存的Statement对象
+
     1. 获取sql语句
     2. 检测是否已经缓存了相同模式的sql对应的Statement对象
         1. 如果已经缓存了，就从Map中拿出来，并修改超时时间
