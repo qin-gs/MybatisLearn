@@ -3,29 +3,24 @@ package com.mybatis.learn.cache;
 import com.mybatis.learn.MybatisLearnApplication;
 import com.mybatis.learn.bean.Blog;
 import com.mybatis.learn.mapper.BlogMapper;
-import net.minidev.json.writer.BeansMapper;
 import org.apache.ibatis.cache.Cache;
-import org.apache.ibatis.logging.jdbc.BaseJdbcLogger;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.sql.SQLException;
 
-// @SpringBootTest
-@RunWith(SpringRunner.class)
+@SpringBootTest
 public class SecondCacheTest {
 
 	private Configuration configuration;
 	private SqlSessionFactory factory;
 
-	@Before
+	@BeforeEach
 	public void init() throws SQLException {
 		SqlSessionFactoryBuilder builder = new SqlSessionFactoryBuilder();
 		factory = builder.build(MybatisLearnApplication.class.getResourceAsStream("/mybatis-config.xml"));

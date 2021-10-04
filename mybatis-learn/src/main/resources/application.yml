@@ -18,10 +18,10 @@ mybatis:
     map-underscore-to-camel-case: true
   type-handlers-package: com.mybatis.learn.handler
 
-logging:
-  config: classpath:log4j.properties
-  level:
-    com.mybatis.learn.mapper: debug
+#logging:
+#  config: classpath:log4j.properties
+#  level:
+#    com.mybatis.learn.mapper: debug
 
 
 

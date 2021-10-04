@@ -37,6 +37,7 @@ public class OgnlTest {
         comments.add(comment);
         blog.setComments(comments);
 
+        // mybatis版本升级后无参构造函数不可用
         // context = new OgnlContext();
         // context.put("blog", blog);
         // context.setRoot(blog);

@@ -8,8 +8,8 @@ import org.apache.ibatis.executor.*;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.*;
 import org.apache.ibatis.transaction.jdbc.JdbcTransaction;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -30,8 +30,8 @@ public class SimpleExecutorTest {
     private JdbcTransaction transaction;
     private SqlSessionFactory factory;
 
-    @Before
-    public void init() throws SQLException {
+    @BeforeEach
+    void init() throws SQLException {
         SqlSessionFactoryBuilder builder = new SqlSessionFactoryBuilder();
         factory = builder.build(MybatisLearnApplication.class.getResourceAsStream("/mybatis-config.xml"));
         configuration = factory.getConfiguration();
