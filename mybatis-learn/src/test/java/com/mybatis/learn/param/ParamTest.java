@@ -1,7 +1,7 @@
 package com.mybatis.learn.param;
 
 import com.mybatis.learn.mapper.BlogMapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;

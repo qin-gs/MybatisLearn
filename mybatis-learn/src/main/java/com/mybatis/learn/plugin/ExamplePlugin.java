@@ -19,6 +19,7 @@ import java.util.Properties;
 })
 public class ExamplePlugin implements Interceptor {
 
+	// 在mybatis-config.xml中进行配置
 	private int testProp;
 
 	@Override

@@ -452,7 +452,7 @@ InterceptorChain
 
 适配器：日志
 
-代理：
+代理：jdk动态代理
 
 单例：VFS 文件扫描
 
@@ -461,4 +461,6 @@ InterceptorChain
 建造者：初始化
 
 组合：动态处理sql节点
+
+责任链：插件
 

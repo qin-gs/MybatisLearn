@@ -923,9 +923,10 @@ ParameterHandler
 ```
 
 3. `SimpleStatementHandler`：使用`java.sql.Statement`完成数据库相关操作，所有sql语句中不能存在占位符，通过`JDBC Connection`创建`Statement`对象，通过`query`完成数据库查询操作，通过`ResultSetHandler`将结果集映射成对象
-   
 4. `PreparedStatementHandler`：使用`java.sql.PreparedStatement`对象完成数据库的相关操作
 5. `CallableStatementHandler`：使用`java.sql.CallableStatement`调用指定存储过程
+
+
 
 #### 3.6 Executor 
 
@@ -947,7 +948,7 @@ ParameterHandler
    
    `CacheKey`(缓存中的`key`，可以添加多个对象(存入`updateList`)，共同决定两个key是否相同)
    
-   加入的对象：
+   默认加入的对象：
    
    1. MappedStatement的id
    2. offset和limit
@@ -960,9 +961,12 @@ ParameterHandler
     1. 缓存查询到的结果对象，直接加载结果
     2. 嵌套查询时，如果一级缓存中缓存了嵌套查询的结果对象，则直接获取；如果一级缓存中记录嵌套查询的结果对象没有完全加载，通过`DeferredLoad`实现延迟加载
    ```text
-   isCached 检测是否缓存的指定查询的结果对象
-   deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
+   Executor:
+   	isCached 检测是否缓存的指定查询的结果对象
+   	deferLoad 负责创建DeferredLoad对象将其添加到deferredLoads集合中
    ```
+   ![BaseExecuter.query方法](./image/BaseExecuter.query方法.png)
+   
    `DeferredLoad`(内部类)负责从`localCache`缓存中延迟加载结果对象
    
    ```text
@@ -985,66 +989,82 @@ ParameterHandler
    
    最外层查询结束，所有的嵌套查询结束，相关缓存项也已经完全加载后触发`DeferredLoad`加载一级缓存中记录的嵌套查询的结果对象， 加载完成后清空`deferredLoads`集合(`flushCache, localCacheScope`两个配置决定是否清空一级缓存)
    
-   deferredLoads集合 update方法：执行insert, update, delete三类sql，调用doUpdate模板方法实现，调用之前清空缓存(因为执行sql之后一级缓存中的数据和数据库中的数据已经不一致了(
-   肮数据))
+   `deferredLoads`集合 `update`方法：执行`insert, update, delete`三类sql，调用`doUpdate`模板方法实现，调用之前清空缓存(因为执行sql之后一级缓存中的数据和数据库中的数据已经不一致了(肮数据))
    
-   **事务相关**：BatchExecutor可以缓存多条sql，然后等待合适的时机将多条sql一起发送到数据库执行(flushStatements方法会在commit/rollback方法之前被调用)
+   **事务相关**：`BatchExecutor`可以缓存多条sql，然后等待合适的时机将多条sql一起发送到数据库执行(`flushStatements`方法会在`commit/rollback`方法之前被调用)
    
-   commit/rollback方法：先清空一级缓存，再flushStatements方法，最后根据参数决定是否真正提交事务
+   `commit/rollback`方法：先清空一级缓存，再`flushStatements`方法，最后根据参数决定是否真正提交事务
    
-2. SimpleExecutor
+2. **SimpleExecutor**
 
-   继承BaseExecutor，不提供批量处理sql语句功能，采用模板方法，只需要专注四个基本方法的实现
+   继承`BaseExecutor`，不提供批量处理sql语句功能，采用模板方法，只需要专注四个基本方法的实现
 
-   query:
+   doQuery:
 
-    1. 获取Configuration配置对象
-    2. 创建StatementHandler对象，实际返回RoutingStatementHandler对象(根据MappedStatement.statementType选择具体的StatementHandler实现)
-    3. 完成Statement的创建和初始化，并处理占位符
-    4. 调用StatementHandler.query方法，执行sql，并通过ResultSetHandler完成结果集映射
-    5. 关闭Statement对象
+    1. 获取`Configuration`配置对象
+    2. 创建`StatementHandler`对象，实际返回`RoutingStatementHandler`对象(根据`MappedStatement.statementType`选择具体的`StatementHandler`实现)
+    3. 完成`Statement`的创建和初始化，并处理占位符
+    4. 调用`StatementHandler.query`方法，执行sql，并通过`ResultSetHandler`完成结果集映射
+    5. 关闭`Statement`对象
 
-3. ReuseExecutor
+3. **ReuseExecutor**
 
-   提供重用Statement功能，通过Map<sql语句, Statement>缓存使用过的Statement对象  
-   与SimpleExecutor不同的是prepareStatement方法；  
-   SimpleExecutor每次都会通过JDBC Connection重新创建Statement对象  
-   ReuseExecutor会尝试重用缓存的Statement对象
+   提供重用`Statement`功能，通过`Map<sql语句, Statement>`缓存使用过的`Statement`对象
+
+   与`SimpleExecutor`不同的是`prepareStatement`方法；
+
+   `SimpleExecutor`每次都会通过`JDBC Connection`重新创建`Statement`对象
+
+   `ReuseExecutor`会尝试重用缓存的`Statement`对象
 
     1. 获取sql语句
-    2. 检测是否已经缓存了相同模式的sql对应的Statement对象
+    2. 检测是否已经缓存了相同模式的sql对应的`Statement`对象
         1. 如果已经缓存了，就从Map中拿出来，并修改超时时间
-        2. 如果没有缓存，就获取数据库连接，创建新的Statement对象，放入Map中
+        2. 如果没有缓存，就获取数据库连接，创建新的`Statement`对象，放入`Map`中
     3. 处理占位符
 
-   事务提交回滚连接关闭时，需要关闭缓存的Statement对象，在doFlushStatements中完成Statement对象的关闭  
-   每个Statement对象只能对应一个结果集，多次调用queryCursor方法执行同一条sql时，会复用同一个Statement对象，只有最后一个ResultSet可用  
-   // queryCursor方法返回的时Cursor对象，用户在迭代Cursor对象时，才会真正遍历结果集对象并进行映射操作，可能导致前面创建的Cursor对象中封装的结果集关闭  
-   // 完成结果集处理后，fetchNextObjectFromDatabase方法会调用DefaultCursor.close方法将其中封装的结果集关闭，同时关闭结果集对应的Statement对象  
-   // 会导致缓存的Statement对象关闭，后面继续使用会出现空指针异常  
-   ReuseExecutor.query方法，在select语句执行之后，会立刻将结果集映射成结果对象，然后关闭结果集，但是不会关闭Statement对象
+   事务提交回滚连接关闭时，需要关闭缓存的`Statement`对象，在`doFlushStatements`中完成`Statement`对象的关闭
 
-4. BatchExecutor  
-   批量处理多条sql语句，只支持insert, update, delete类型，不支持select
+   每个`Statement`对象只能对应一个结果集，多次调用`queryCursor`方法执行同一条sql时，会复用同一个`Statement`对象，只有最后一个`ResultSet`可用
+
+   // `ReuseExecutor.queryCursor`方法返回的`Cursor`对象，用户在迭代`Cursor`对象时，才会真正遍历结果集对象并进行映射操作，可能导致前面创建的`Cursor`对象中封装的结果集关闭
+
+   // 完成结果集处理后，`fetchNextObjectFromDatabase`方法会调用`DefaultCursor.close`方法将其中封装的结果集关闭，同时关闭结果集对应的`Statement`对象，后面继续使用会出现空指针异常
+
+   // `ReuseExecutor.query`方法，在`select`语句执行之后，会立刻将结果集映射成结果对象，然后关闭结果集，但是不会关闭`Statement`对象
+
+4. **BatchExecutor**
+   批量处理多条sql语句，只支持`insert, update, delete`类型，不支持~~select~~
 
 ```text
-List<Statement> 缓存多个Statement对象，每个Statement对象有多条sql  
-List<BatchResult> 记录每个Statement对象执行批处理的结果  
-String sql 记录当前执行的sql
+List<Statement> 缓存多个Statement对象，每个Statement对象有多条sql
+List<BatchResult> 记录每个Statement对象执行批处理的结果
+String currentSql 记录当前执行的sql
 MappedStatement 记录当前执行的MappedStatement对象(表示映射文件中定义的sql节点)
 ```
 
-doUpdate  
-如果当前执行的sql模式与上次执行的sql模式相同并且对应的MappedStatement相同，获取集合中的最后一个Statement，绑定实参，处理占位符，查找对应的BatchResult对象，记录用户传入的实参  
-如果不相同，去创建新的Statement对象，绑定实参，处理占位符，更新当前sql和当前MappedStatement，将创建的Statement对象放入集合，添加新的BatchResult对象  
-将连续添加的，相同模式的sql语句放到同一个Statement/PreparedStatement对象中，减少编译的次数  
-doFlushStatements  
-批量处理sql，遍历所有的Statement对象一次执行，并处理返回值(影响的行数)，保存结果集对象，关闭所有的Statement  
-doQuery doQueryCursor  
-与SimpleExecutor类似，就是会在调用前flushStatements，执行缓存的sql来确保从数据库中拿到最新的数据
+1. `doUpdate`
 
-5. CachingExecutor  
-   一个Executor的装饰器，提供二级缓存功能    
+   如果当前执行的sql模式与上次执行的sql模式相同并且对应的`MappedStatement`相同，获取集合中的最后一个`Statement`，绑定实参，处理占位符，查找对应的`BatchResult`对象，记录用户传入的实参
+
+   如果不相同，去创建新的`Statement`对象，绑定实参，处理占位符，更新当前sql和当前`MappedStatement`，将创建的`Statement`对象放入集合，添加新的`BatchResult`对象
+
+   将连续添加的，相同模式的sql语句放到同一个`Statement/PreparedStatement`对象中，减少编译的次数
+
+2. `doFlushStatements`
+
+   批量处理sql，遍历所有的Statement对象一次执行，并处理返回值(影响的行数)，保存结果集对象，关闭所有的`Statement`
+
+3. `doQuery doQueryCursor`
+
+   与`SimpleExecutor`类似，就是会在调用前`flushStatements`，执行缓存的sql来确保从数据库中拿到最新的数据
+
+   
+
+5. **CachingExecutor**
+
+   一个Executor的装饰器，提供二级缓存功能 
+
    二级缓存的生命周期与应用程序的生命周期相同
 
 ```text
@@ -1054,96 +1074,133 @@ mybatis-config.xml  ->  cacheEnabled=true 总开关
 <select useCache=true>  表示查询的结果是否保存到二级缓存中  
 ```
 
-CachingExecutor中依赖的两个组件
+`CachingExecutor`中依赖的两个组件
 
-1. TransactionalCache  
-   继承Cache接口，用来保存在某个SqlSession的某个事务中需要向某个二级缓存中添加的缓存数据  
+1. `TransactionalCache`
+
+   继承`Cache`接口，用来保存在某个`SqlSession`的某个事务中需要向某个二级缓存中添加的缓存数据
+
    将需要放入二级缓存的数据暂时存放在集合中，等事务提交时才会真正放进去
-2. TransactionalCacheManager  
-   用来管理CachingExecutor使用的二级缓存对象，定义了一个HashMap<Cache, TransactionalCache>  
-   key时对应的CacheExecutor使用的二级缓存对象，value是相应的TransactionalCache对象(封装对应的二级缓存对象，就是key)  
-   clear, putObject, getObject 调用二级缓存对应的TransactionalCache对象的对应方法  
+
+   `putObject, getObject, clear, commit, rollback`管理二级缓存对象
+
+2. `TransactionalCacheManager`
+
+   用来管理`CachingExecutor`使用的二级缓存对象，定义了一个`HashMap<Cache, TransactionalCache>`
+
+   key是对应的`CacheExecutor`使用的二级缓存对象，value是相应的`TransactionalCache`对象(封装对应的二级缓存对象，就是key)
+
+   `putObject, getObject, clear, commit, rollback` 调用二级缓存对应的`TransactionalCache`对象的对应方法
+
    ![二级缓存相关的类](./image/二级缓存相关的类.png)
 
-query  
-执行查询操作
+1. **query**
 
-1. 获取BoundSql，创建查询语句对应的CacheKey对象
-2. 检测是否开启二级缓存，没有开启就直接调用底层Executor对象查询数据库；开启了继续下面的步骤
-3. 检测查询操作是否有输出类型(存储过程)的参数，有的话报错
-4. 调用TransactionalCacheManager.getObject 查询二级缓存，如果找到了直接返回，
-5. 如果没找到，调用底层Executor对象的query方法，先查询一级缓存，如果未命中去查询数据库；
-6. 将得到的结果放入缓存集合中保存
+   执行查询操作
 
-commit/rollback  
-都会先调用底层executor的方法来提交/回滚事务，然后遍历所有相关的TransactionalCache对象来提交/回滚事务
+   1. 获取`BoundSql`，创建查询语句对应的`CacheKey`对象
+   2. 检测是否开启二级缓存，没有开启就直接调用底层`Executor`对象查询数据库；开启了继续下面的步骤
+   3. 检测查询操作是否有输出类型(存储过程)的参数，有的话报错
+   4. 调用`TransactionalCacheManager.getObject` 查询二级缓存，如果找到了直接返回，
+   5. 如果没找到，调用底层`Executor`对象的`query`方法，先查询一级缓存，如果未命中去查询数据库；
+   6. 将得到的结果放入缓存集合中保存
 
-不同的CacheExecutor由不同的线程操作  
-CacheBuilder.build方法会调用CacheBuilder.setStandardDecorators为PerpetualCache类型的Cache对象添加装饰器，这个过程中会添加SynchronizedCache这个装饰器，来保证二级缓存的线程安全  
-事务提交时才会将entriesToAddOnCommit集合中缓存的数据写入二级缓存，用来避免`脏读`  
-TransactionalCache.entriesMissedInCache集合的作用  
-与BlockingCache相关，查询二级缓存会调用getObject方法，如果二级缓存中没有对应数据，就去查询数据库最后将结果putObject放入二级缓存  
-如果用了BlockingCache，getObject会有加锁过程，putObject会有解锁过程，如果两者之间出现异常，可能会无法释放锁，导致缓存项无法被其他SqlSession使用  
-因此使用该集合记录未命名的CacheKey，也就是加了锁的缓存项，`entriesToAddOnCommit`是`entriesMissedInCache`集合的子集，也就是正常解锁的缓存项  
-对于未正常结束的缓存项，会在事务提交或回滚时进行解锁操作
+2. **commit/rollback**
 
-6. 接口层  
-   SqlSession 接口层的主要组成部分，对外提供MyBatis常用API  
-   ![SqlSession继承关系](./image/SqlSession继承关系.png)
+   都会先调用底层`executor`的方法来提交/回滚事务，然后遍历所有相关的`TransactionalCache`对象来将集合中的结果放入二级缓存。
 
-   SqlSessionFactory负责创建SqlSession对象，其中包含多个openSession方法的重载，可以通过参数指定事务的隔离级别、使用的Executor类型、是否自动提交事务等配置  
-   SqlSession中定义常用的数据库操作和事务相关操作，对每种类型(select, update, delete, insert)的操作都提供多种重载
+   
 
-   策略：定义封装一系列算法，互相之间可以互相替换(开放封闭原则)    
-   DefaultSqlSession 是调用者，将数据库相关相关的操作封装到Executor接口中实现，通过executor字段选择不同的Executor实现  
-   select*方法最终调用query(MappedStatement, Object, RowBounds, ResultHandler)方法完成数据库查询操作  
+   不同的`CacheExecutor`由不同的线程操作：
+
+   `CacheBuilder.build`方法会调用`CacheBuilder.setStandardDecorators`为`PerpetualCache`类型的`Cache`对象添加装饰器，这个过程中会添加`SynchronizedCache`这个装饰器，来保证二级缓存的线程安全
+
+   事务提交时才会将`entriesToAddOnCommit`集合中缓存的数据写入二级缓存，用来避免`脏读`。
+
+   
+
+   `TransactionalCache.entriesMissedInCache`集合的作用：
+
+   与`BlockingCache`相关，查询二级缓存会调用`getObject`方法，如果二级缓存中没有对应数据，就去查询数据库最后将结果`putObject`放入二级缓存。
+
+   如果用了`BlockingCache`，`getObject`会有加锁过程，`putObject`会有解锁过程，如果两者之间出现异常，可能会无法释放锁，导致缓存项无法被其他`SqlSession`使用。
+
+   因此使用该集合记录未命名的`CacheKey`，也就是加了锁的缓存项，`entriesToAddOnCommit`是`entriesMissedInCache`集合的子集，也就是正常解锁的缓存项，对于未正常结束的缓存项，会在事务提交或回滚时进行解锁操作。
+
+   
+
+#### 3.7 接口层
+
+SqlSession 接口层的主要组成部分，对外提供MyBatis常用API
+
+![SqlSession继承关系](./image/SqlSession继承关系.png)
+
+`SqlSessionFactory`: 负责创建`SqlSession`对象，其中包含多个`openSession`方法的重载，可以通过参数指定事务的隔离级别、使用的Executor类型、是否自动提交事务等配置
+
+`SqlSession`: 中定义常用的数据库操作和事务相关操作，对每种类型(`select, update, delete, insert`)的操作都提供多种重载
+
+**策略**：定义封装一系列算法，互相之间可以互相替换(开放封闭原则) 
+
+1. `DefaultSqlSession`: 是调用者，将数据库相关相关的操作封装到`Executor`接口中实现，通过`executor`字段选择不同的`Executor`实现(`SimpleExecutor, ReuseExecutor...`)
+
+   select*方法最终调用`query(MappedStatement, Object, RowBounds, ResultHandler)`方法完成数据库查询操作
    各自对结果进行调整：
-    1. selectOne 从结果对象集合中获取第一个元素返回
-    2. selectMap 方法将List类型的结果对象集合转换成Map类型集合返回
-    3. select 方法将结果对象集合交由用户指定的ResultHandler对象处理，且没有返回值
-    4. selectList 方法直接返回结果对象集合
 
-   insert*, update*, delete*方法最终是通过DefaultSqlSession.update(String, Object) 方法实现  
-   首先将dirty字段设为true(有脏数据)，然后调用Executor.update方法完成数据库修改操作  
-   commit, rollback, close 方法调用Executor中相应的方法完成(涉及清空缓存操作，最后将dirty字段设为false)
+    1. `selectOne `从结果对象集合中获取第一个元素返回
+    2. `selectMap `方法将List类型的结果对象集合转换成Map类型集合返回
+    3. `select `方法将结果对象集合交由用户指定的ResultHandler对象处理，且没有返回值
+    4. `selectList `方法直接返回结果对象集合
 
-   DefaultSqlSessionFactory (implenents SqlSessionFactory)  
-   提供两者创建DefaultSqlSession的方法
-    1. 通过数据源获取数据库连接，并创建Executor对象以及DefaultSqlSession对象，使用完立刻关闭(获取mybatis-config.xml中配置的Environment对象)
-    2. 用户提供数据库连接对象，然后使用该对象创建Executor对象以及DefaultSqlSession对象
+   `insert*, update*, delete*`方法最终是通过`DefaultSqlSession.update(String, Object) `方法实现
 
-   SqlSessionManager (implements SqlSession, SqlSessionFactory)  
-   同时提供 SqlSessionFactory创建SqlSession对象 和 SqlSession操纵数据库功能
-   ```text
-        private final SqlSessionFactory sqlSessionFactory; // 工厂对象
-        private ThreadLocal<SqlSession> localSqlSession = new ThreadLocal<SqlSession>(); // 记录一个与当前线程绑定的SqlSession对象
-        private final SqlSession sqlSessionProxy; // 上面记录的SqlSession的代理对象，在SqlSessionManager中使用JDK动态代理创建代理对象
-   ```
-   提供两种模式：
-    1. 与DefaultSqlSessionFactory相同，统一线程每次通过SqlSessionManager对象访问数据库时，都会创建新的DefaultSession对象完成数据库操作
-    2. SqlSessionManager通过localSqlSession这个ThreadLocal这个变量，记录与当前线程绑定的SqlSession对象，当前线程循环使用，避免同一线程多次创建SqlSession对象
+   首先将`dirty`字段设为`true`(有脏数据)，然后调用`Executor.update`方法完成数据库修改操作
 
-   SqlSessionManager.openSession方法使用底层封装的SqlSessionFactory对象的openSession方法来创建SqlSession对象  
-   SqlSessionManager.select*/update等方法直接调用sqlSessionProxy字段记录的SqlSession代理对象的相应方法实现的
+   `commit, rollback, close` 方法调用`Executor`中相应的方法完成(涉及清空缓存操作，最后将`dirty`字段设为`false`，该字段和用户传入的参数共同决定是否提交/回滚事务)
+
+2. `DefaultSqlSessionFactory (implenents SqlSessionFactory)`
+
+   提供两种创建`DefaultSqlSession`的方法: 
+
+    1. 通过数据源获取数据库连接，并创建`Executor`对象以及`DefaultSqlSession`对象，使用完立刻关闭(这里会使用`mybatis-config.xml`中配置的`Environment`对象，直接获取`DataSource`)
+    2. 用户提供数据库连接对象，然后使用该对象创建`Executor`对象以及`DefaultSqlSession`对象
+
+   
+
+3. **SqlSessionManager (implements SqlSession, SqlSessionFactory)**
+
+   同时提供 `SqlSessionFactory`创建`SqlSession`对象 和 `SqlSession`操纵数据库功能
+
+```text
+private final SqlSessionFactory sqlSessionFactory; // 工厂对象
+private ThreadLocal<SqlSession> localSqlSession = new ThreadLocal<SqlSession>(); // 记录一个与当前线程绑定的SqlSession对象
+private final SqlSession sqlSessionProxy; // 上面记录的SqlSession的代理对象，在SqlSessionManager中使用JDK动态代理创建代理对象
+```
+​	提供两种模式：
+ 1. 与`DefaultSqlSessionFactory`相同，统一线程每次通过`SqlSessionManager`对象访问数据库时，都会创建新的`DefaultSession`对象完成数据库操作
+ 2. `SqlSessionManager`通过`localSqlSession`这个`ThreadLocal`这个变量，记录与当前线程绑定的`SqlSession`对象，当前线程循环使用，避免同一线程多次创建`SqlSession`对象
+
+`SqlSessionManager.openSession`方法使用底层封装的`SqlSessionFactory`对象的`openSession`方法来创建`SqlSession`对象
+
+`SqlSessionManager.select*/update*`等方法直接调用`sqlSessionProxy`字段记录的`SqlSession`代理对象的相应方法实现的
 
 ### 4. 插件
 
-1. 插件
+#### 4.1 插件
 
-采用 责任链 和 JDK动态代理 的模式，通过拦截器Interceptor实现  
+采用 **责任链** 和 **JDK动态代理** 的模式，通过拦截器Interceptor实现
+
+责任链：将完整的实现逻辑拆分到只包含部分逻辑，功能单一的处理类(Handler)中，将多个处理类组合成一条责任链。在一条责任链中每个Handler都包含下一个Handler的引用(开放-封闭)
+
 可拦截方法：
 
-```text
-这四个都是接口，所以可以用JDK动态代理为其实现类创建代理对象
-Executor: update, query, flushStatements, commit, rollback, getTransaction, close, isClosed
-ParameterHandler: getParameterObject, setParameters
-ResultSetHandler: handleResultSets, handleOutputParameters
-StatementHandler: prepare, parameterize, batch, update, query
-这四种对象都是通过Configuration.new*方法创建的
-如果配置了拦截器，会通过InterceptorChain.pluginAll方法为目标对象用JDK动态代理创建代理对象
-```
+1. `Executor`: `update, query, flushStatements, commit, rollback, getTransaction, close, isClosed`
+2. `ParameterHandler`: `getParameterObject, setParameters`
+3. `ResultSetHandler`: `handleResultSets, handleOutputParameters`
+4. `StatementHandler`: `prepare, parameterize, batch, update, query`
 
-org.apache.ibatis.plugin.Interceptor
+这四个都是接口，所以可以用JDK动态代理为其实现类创建代理对象，都是通过`Configuration.new*`方法创建的，如果配置了拦截器，会通过`InterceptorChain.pluginAll`方法为目标对象用JDK动态代理创建代理对象
+
+`org.apache.ibatis.plugin.Interceptor`
 
 ```text
 interceptor: 具体的拦截逻辑
@@ -1151,10 +1208,11 @@ plugin: 是否触发上面的拦截逻辑
 setProperties: 根据配置初始化Interceptor对象
 ```
 
-@Intercepts: 指定一个@Signature注解列表，每个注解中都标识了该插件需要拦截的方法信息  
-@Signature: 用来确定唯一的方法签名(type 需要拦截的类型; method 需要拦截的对象; args 被拦截方法的参数列表)
+`@Intercepts`: 指定一个`@Signature`注解列表，每个注解中都标识了该插件需要拦截的方法信息
 
-MyBatis初始化时，会解析xml配置文件 或 注解 ，将拦截器对象进行初始化并保存到Configuration.interceptorChain字段中
+`@Signature`: 用来确定唯一的方法签名(`type `需要拦截的类型; `method `需要拦截的对象; `args `被拦截方法的参数列表)
+
+MyBatis初始化时，会解析xml配置文件 或 注解 ，将拦截器对象进行初始化并保存到`Configuration.interceptorChain`字段中
 
 ```text
 Plugin.wrap 静态方法可以用来创建代理对象  
@@ -1167,34 +1225,48 @@ Interceptor.intercept(Invocation)
 Invocation对象封装了 目标对象，目标方法，调用目标方法的参数，proceed方法调用目标方法
 ```
 
-应用场景  
-分页插件 MyBatis自带的RowBounds分页方法，通过循环调用ResultSet.next方法定位到指定的行  
-插件：拦截Executor.query方法，同RowBounds参数获取所需记录的起始位置，根据不同的数据库(策略)给BoundSql参数添加limit等片段
+应用场景
 
-MyBatis 和 Spring 集成  
-mybatis-spring-2.0.6.jar  
-MyBatis初始化时，SqlSessionFactoryBuilder通过XMLConfigBuilder等对象读取mybatis-config.xml配置文件和映射配置信息，得到Configuration对象  
-与Spring集成之后，SqlSessionFactory对象通过SqlSessionFactoryBean对象(如果用xml配置，需要指定数据源，配置mybatis-config.xml文件位置)创建
+1. 分页插件 `MyBatis`自带的`RowBounds`分页方法，通过循环调用`ResultSet.next`方法定位到指定的行
 
-如果配置文件中没有明确为SqlSessionFactoryBean指定transactionFactory属性，就使用默认的SpringManagedTransactionFactory  
-该类的newTransaction方法返回SpringManagedTransaction
+   插件：拦截`Executor.query`方法，通过`RowBounds`参数获取所需记录的起始位置，根据不同的数据库(策略)给`BoundSql`参数添加`limit`等片段
 
-SqlSessionTemplate 核心  
-实现了SqlSession接口，用来代理DefaultSqlSession功能  
-可以用来完成指定的数据库操作，线程安全，可以在dao层共享  
-通过调用sqlSessionProxy(用Jdk动态代理生成的代理对象)的相应方法实现SqlSession接口的所有方法  
-SqlSessionInterceptor 接口 会检测事务是否由Spring管理决定是否提交事务  
-SqlSessionUtils.getSession方法，会尝试从Spring事务管理器中获取SqlSession对象  
+2. MyBatis 和 Spring 集成
+
+`MyBatis`初始化时，`SqlSessionFactoryBuilder`通过`XMLConfigBuilder`等对象读取`mybatis-config.xml`配置文件和映射配置信息，得到`Configuration`对象
+
+与`Spring`集成之后，`SqlSessionFactory`对象通过`SqlSessionFactoryBean`对象(如果用xml配置，需要指定数据源，配置`mybatis-config.xml`文件位置)创建
+
+如果配置文件中没有明确为`SqlSessionFactoryBean`指定`transactionFactory`属性，就使用默认的`SpringManagedTransactionFactory`
+
+该类的`newTransaction`方法返回`SpringManagedTransaction`
+
+SqlSessionTemplate 核心
+
+实现了SqlSession接口，用来代理DefaultSqlSession功能
+
+可以用来完成指定的数据库操作，线程安全，可以在dao层共享
+
+通过调用sqlSessionProxy(用Jdk动态代理生成的代理对象)的相应方法实现SqlSession接口的所有方法
+
+SqlSessionInterceptor 接口 会检测事务是否由Spring管理决定是否提交事务
+
+SqlSessionUtils.getSession方法，会尝试从Spring事务管理器中获取SqlSession对象
+
 获取成功就直接返回，否则通过SqlSessionFactory创建SqlSession对象然后交给Spring的事务管理器
 
-SqlSessionDaoSupport  
-DaoSupport 用来辅助开发人员编写dao层代码  
+SqlSessionDaoSupport
+
+DaoSupport 用来辅助开发人员编写dao层代码
+
 通过继承该类方便获取SqlSessionTemplate对象，完成数据库访问操作
 
-MapperFactoryBean MapperScannerConfigurer  
+MapperFactoryBean MapperScannerConfigurer
+
 MapperFactoryBean 是一个动态代理类，直接将Mapper接口注入到Service层的Bean中
 
-new SQL{{}} 动态生成sql语句  
+new SQL{{}} 动态生成sql语句
+
 用户可自定义sql语言驱动器(实现 org.apache.ibatis.scripting.LanguageDriver接口，注册进去)
 @Lang(MyLanguageDriver.class) | <select id="" lang="myLanguage"> 对特殊语句指定特定的语言驱动器  
 
