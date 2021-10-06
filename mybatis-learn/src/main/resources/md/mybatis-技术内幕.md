@@ -9,7 +9,7 @@
 1. 注册数据库驱动，明确指定url，用户名，密码等
 2. 通过`DriverManager`获取连接`Connection`
 3. 通过连接而创建`Statenment`语句
-4. 通过`Statement`对象执行`sq`l语句，得到`ResultSet`
+4. 通过`Statement`对象执行`sql`语句，得到`ResultSet`
 5. 通过`ResultSet`读取数据，将数据转换成`Bean`
 6. 关闭`ResultSet， Statement， Connection`等，释放资源
 
@@ -1242,27 +1242,31 @@ Invocation对象封装了 目标对象，目标方法，调用目标方法的参
 
 2. MyBatis 和 Spring 集成
 
-`MyBatis`初始化时，`SqlSessionFactoryBuilder`通过`XMLConfigBuilder`等对象读取`mybatis-config.xml`配置文件和映射配置信息，得到`Configuration`对象
+- `MyBatis`初始化时，`SqlSessionFactoryBuilder`通过`XMLConfigBuilder`等对象读取`mybatis-config.xml`配置文件和映射配置信息，得到`Configuration`对象
 
-与`Spring`集成之后，`SqlSessionFactory`对象通过`SqlSessionFactoryBean`对象(如果用xml配置，需要指定数据源，配置`mybatis-config.xml`文件位置)创建
+- 与`Spring`集成之后，`SqlSessionFactory`对象通过`SqlSessionFactoryBean`对象(如果用xml配置，需要指定数据源，配置`mybatis-config.xml`文件位置)创建
 
-如果配置文件中没有明确为`SqlSessionFactoryBean`指定`transactionFactory`属性，就使用默认的`SpringManagedTransactionFactory`
+`SqlSessionFactoryBean` -> `SqlSessionFactory`
 
-该类的`newTransaction`方法返回`SpringManagedTransaction`
+​	SSFB中定义了很多与mybatis配置相关的字段
 
-SqlSessionTemplate 核心
+​	如果配置文件中没有明确为`SqlSessionFactoryBean`指定`transactionFactory`属性，就使用默认的`SpringManagedTransactionFactory`，,该类的`newTransaction`方法返回`SpringManagedTransaction`
 
-实现了SqlSession接口，用来代理DefaultSqlSession功能
+`SpringManagedTransaction` 
 
-可以用来完成指定的数据库操作，线程安全，可以在dao层共享
+​	实现了`TransactionFactory`接口，通过`newTransaction`方法返回`SpringManagedTransaction`(用来创建连关闭连接，提交回滚事务等)
 
-通过调用sqlSessionProxy(用Jdk动态代理生成的代理对象)的相应方法实现SqlSession接口的所有方法
+`SqlSessionTemplate `**核心**
 
-SqlSessionInterceptor 接口 会检测事务是否由Spring管理决定是否提交事务
+- 实现了`SqlSession`接口同时也封装了一个`SqlSession`，用来代替mybatis中的`DefaultSqlSession`功能
 
-SqlSessionUtils.getSession方法，会尝试从Spring事务管理器中获取SqlSession对象
+- 可以用来完成指定的数据库操作，**线程安全**，可以在dao层共享，记录该数据库连接对象是否由`spring`事务管理器管理
 
-获取成功就直接返回，否则通过SqlSessionFactory创建SqlSession对象然后交给Spring的事务管理器
+- 通过调用`sqlSessionProxy`(用Jdk动态代理生成的代理对象)的相应方法实现`SqlSession`接口的所有方法
+
+`SqlSessionInterceptor `接口 会检测事务是否由`Spring`管理决定是否提交事务
+
+`SqlSessionUtils.getSession`方法，会尝试从`Spring`事务管理器中获取`SqlSession`对象，获取成功就直接返回，否则通过`SqlSessionFactory`创建`SqlSession`对象然后交给`Spring`的事务管理器
 
 SqlSessionDaoSupport
 
