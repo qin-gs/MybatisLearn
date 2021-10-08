@@ -1240,7 +1240,7 @@ Invocation对象封装了 目标对象，目标方法，调用目标方法的参
 
    插件：拦截`Executor.query`方法，通过`RowBounds`参数获取所需记录的起始位置，根据不同的数据库(策略)给`BoundSql`参数添加`limit`等片段
 
-2. MyBatis 和 Spring 集成
+#### 4.2 MyBatis 和 Spring 集成
 
 - `MyBatis`初始化时，`SqlSessionFactoryBuilder`通过`XMLConfigBuilder`等对象读取`mybatis-config.xml`配置文件和映射配置信息，得到`Configuration`对象
 
@@ -1268,15 +1268,41 @@ Invocation对象封装了 目标对象，目标方法，调用目标方法的参
 
 `SqlSessionUtils.getSession`方法，会尝试从`Spring`事务管理器中获取`SqlSession`对象，获取成功就直接返回，否则通过`SqlSessionFactory`创建`SqlSession`对象然后交给`Spring`的事务管理器
 
-SqlSessionDaoSupport
+`SqlSessionDaoSupport`
 
-DaoSupport 用来辅助开发人员编写dao层代码
+`DaoSupport `用来辅助开发人员编写dao层代码
 
-通过继承该类方便获取SqlSessionTemplate对象，完成数据库访问操作
+通过继承该类方便获取`SqlSessionTemplate`对象，完成数据库访问操作
 
-MapperFactoryBean MapperScannerConfigurer
+`MapperFactoryBean MapperScannerConfigurer`
 
-MapperFactoryBean 是一个动态代理类，直接将Mapper接口注入到Service层的Bean中
+1. `MapperFactoryBean `
+
+`MapperFactoryBean `是一个动态代理类，直接将`Mapper`接口注入到`Service`层的`Bean`中，创建一个代理对象
+
+```hrml
+<!-- 配置一个bean-->
+<bean id="userMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">
+	<!-- 配置mapper接口 -->
+	<property name="mapperInterface" value="com.mybatis.learn.mapper.UserMapper"/>
+	<!-- 配SesisionFactory，用来创建SqlSessionTemplate -->
+	<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+</bean>
+```
+
+![image-20211008193229734](./image/MapperFactoryBean继承关系.png)
+
+`InitializingBean#afterPropertiesSet` 完成bean对象的初始化，注册Mapper接口
+
+`FactoryBean#getObject`获取Mapper接口的代理对象
+
+2. `MapperScannerConfigurer`
+
+完成包扫描功能
+
+![image-20211008195458163](./image/MapperScannerConfigurer继承关系.png)
+
+#### 4.3 拾遗
 
 new SQL{{}} 动态生成sql语句
 
