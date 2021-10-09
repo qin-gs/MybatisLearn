@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mybatis.learn.mapper.BlogMapper">
+
+    <!--提取一些sql片段-->
+    <sql id="customer_cols">
+        customer.id,
+        customer.name,
+        customer.age,
+        customer.sex,
+        customer.address,
+        customer.type,
+        customer.level
+    </sql>
+    <sql id="customer_where">
+        <where>
+            <if test="customer != null">
+                <if test="customer.sex != null and customer.sex != ''">
+                    and sex = #{customer.sex}
+                </if>
+                <if test="ids != null">
+                    <foreach collection="ids" item="id" open=" and (" close=" ) " separator=" or ">
+                        id = #{id}
+                    </foreach>
+                </if>
+                <if test="customer.name != null and customer.name != ''">
+                    and customer.name like '%${customer.name}%'
+                </if>
+            </if>
+        </where>
+    </sql>
+
+    <sql id="order_cols">
+        ordr.id,
+        ordr.package,
+        ordr.weight,
+        ordr.type as orderType,
+        ordr.sum,
+        ordr.time
+    </sql>
+    <sql id="order_where">
+        <if test="order != null">
+            <if test="order.package != null and order.package != ''">
+                and ordr.package= #{order.package}
+            </if>
+            <if test="order.weight != null and order.weight != ''">
+                and ordr.weight= #{weight}
+            </if>
+            <if test="order.sum != null and order.sum != ''">
+                and ordr.sum= #{order.sum}
+            </if>
+            <if test="order.time != null and order.time != ''">
+                and ordr.time= #{order.time}
+            </if>
+            <if test="order.type != null and order.type != ''">
+                and ordr.type= #{order.type}
+            </if>
+        </if>
+    </sql>
+
+    <!--引用上面的sql片段-->
+    <select id="selectCustomerList_" resultType="customer">
+        select
+        <include refid="customer_cols"/>
+        from customer
+        <where>
+            <include refid="customer_where"/>
+        </where>
+    </select>
+
+    <select id="selectCustomerList" resultType="com.mybatis.learn.bean.Customer">
+        select customer.id,
+        customer.name,
+        customer.age,
+        customer.sex,
+        customer.address,
+        customer.type,
+        customer.level
+        from customer
+        <where>
+            <if test="customer != null">
+                <if test="customer.sex != null and customer.sex != ''">
+                    and sex = #{customer.sex}
+                </if>
+                <if test="ids != null">
+                    <foreach collection="ids" item="id" open=" and (" close=" ) " separator=" or ">
+                        id = #{id}
+                    </foreach>
+                </if>
+                <if test="customer.name != null and customer.name != ''">
+                    and customer.name like '%${customer.name}%'
+                </if>
+            </if>
+        </where>
+    </select>
+
+    <select id="selectOrderList_" resultMap="orderMap">
+        select
+        <include refid="customer_where"/>
+        <include refid="order_cols"/>
+        from customer, t_order as ordr
+        <where>
+            <include refid="customer_where"/>
+            <include refid="order_where"/>
+        </where>
+    </select>
+    <select id="selectOrderList" resultMap="orderMap">
+        select customer.id,
+        customer.name,
+        customer.age,
+        customer.sex,
+        customer.address,
+        customer.type,
+        customer.level,
+        ordr.id,
+        ordr.package,
+        ordr.weight,
+        ordr.type as orderType,
+        ordr.sum,
+        ordr.time
+        from customer,
+        t_order as ordr
+        <where>
+            customer.id = ordr.id
+            <if test="customer != null">
+                <if test="customer.sex != null and customer.sex != ''">
+                    and sex = #{customer.sex}
+                </if>
+                <if test="ids != null">
+                    <foreach collection="ids" item="id" open=" and (" close=" ) " separator=" or ">
+                        id = #{id}
+                    </foreach>
+                </if>
+                <if test="customer.name != null and customer.name != ''">
+                    and customer.name like '%${customer.name}%'
+                </if>
+            </if>
+            <if test="order != null">
+                <if test="order.package != null and order.package != ''">
+                    and ordr.package= #{order.package}
+                </if>
+                <if test="order.weight != null and order.weight != ''">
+                    and ordr.weight= #{weight}
+                </if>
+                <if test="order.sum != null and order.sum != ''">
+                    and ordr.sum= #{order.sum}
+                </if>
+                <if test="order.time != null and order.time != ''">
+                    and ordr.time= #{order.time}
+                </if>
+                <if test="order.type != null and order.type != ''">
+                    and ordr.type= #{order.type}
+                </if>
+            </if>
+        </where>
+    </select>
+
+    <resultMap id="orderMap" type="com.mybatis.learn.bean.Order"></resultMap>
+</mapper>

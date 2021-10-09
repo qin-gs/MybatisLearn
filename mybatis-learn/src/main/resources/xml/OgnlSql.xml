@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mybatis.learn.mapper.BlogMapper">
+
+    <sql id="customer_where">
+        <where>
+            <if test="customer != null">
+                # 使用ognl表达式进行判断  @类名@静态方法名
+                <if test="@com.mybatis.learn.util.OgnlUtil@isNotEmpty(customer.sex)">
+                    and sex = #{customer.sex}
+                </if>
+                <if test="@com.mybatis.learn.util.OgnlUtil@isNotEmpty(ids)">
+                    <foreach collection="ids" item="id" open=" and (" close=" ) " separator=" or ">
+                        id = #{id}
+                    </foreach>
+                </if>
+                <if test="customer.name != null and customer.name != ''">
+                    and customer.name like '%${customer.name}%'
+                </if>
+            </if>
+        </where>
+    </sql>
+
+</mapper>

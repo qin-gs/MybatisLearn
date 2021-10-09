@@ -38,9 +38,9 @@
         <package name="com.mybatis.learn.handler"/>
     </typeHandlers>
 
-    <objectFactory type="com.mybatis.learn.factory.ExampleObjectFactory">
-        <property name="someProperty" value="200"/>
-    </objectFactory>
+    <!--<objectFactory type="com.mybatis.learn.factory.ExampleObjectFactory">-->
+    <!--    <property name="someProperty" value="200"/>-->
+    <!--</objectFactory>-->
 
     <!--<plugins>-->
     <!--    <plugin interceptor="com.mybatis.learn.plugin.ExecutorPlugin">-->
@@ -76,7 +76,7 @@
             </dataSource>
         </environment>
     </environments>
-
+    
     <databaseIdProvider type="DB_VENDOR">
         <property name="MySQL" value="mysql"/>
     </databaseIdProvider>
