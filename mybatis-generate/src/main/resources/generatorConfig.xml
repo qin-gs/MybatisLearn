@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+
+    <!--指定数据库驱动地址-->
+    <!--<classPathEntry location="mysql-connector-java-8.0.25.jar"/>-->
+
+    <!--导入配置 -->
+    <properties resource="jdbc.properties"/>
+
+    <!-- context 一般是一个数据源一个context 可以在配置文件中配置多个<context>节点来实现从不同数据源或采用不同生成参数生成对象。-->
+    <!-- id: 用于唯一标识指定环境。必选属性-->
+    <!-- targetRuntime:	用于指定生成代码的风格。默认为 MyBatis3DynamicSql-->
+    <!-- MyBatis3DynamicSql 默认风格，官方推荐 Java代码 全注解，不生成 XML 文件-->
+    <!-- MyBatis3Simple MyBatis3 的简易版 Java代码 能够生成 MyBatis3 兼容的 xml 或 全注解-->
+
+    <!-- defaultModelType: 指定实体对象的类型。包括三种：-->
+    <!--     flat：一个表生成一个实体类；-->
+    <!--     conditional：和 hierarchical 差不多，区别在于如果表只有一个主键，不会单独去生成一个主键类；-->
+    <!--     hierarchical：除了生成基本类，如果表中包含主键或 BLOB 列，都会单独再生成一个主键类或BLOB类-->
+    <!--        默认为 conditional，如果 targetRuntime 为 "MyBatis3Simple"、"MyBatis3DynamicSql"或"MyBatis3Kotlin"，则该属性忽略-->
+    <context id="default" targetRuntime="MyBatis3Simple" defaultModelType="flat">
+
+        <!-- 插件 -->
+        <!-- 在实体类中添加toString方法-->
+        <plugin type="org.mybatis.generator.plugins.ToStringPlugin">
+            <property name="useToStringFromRoot" value="true"/>
+        </plugin>
+        <!-- 在Mapper接口中添加@Mapper注解-->
+        <plugin type="org.mybatis.generator.plugins.MapperAnnotationPlugin">
+        </plugin>
+
+        <!-- 生成注释 -->
+        <commentGenerator type="org.mybatis.generator.internal.DefaultCommentGenerator">
+            <!--是否不生成任何注解-->
+            <property name="suppressAllComments" value="false"/>
+            <!-- 是否注释中不包含时间-->
+            <property name="suppressDate" value="false"/>
+            <!-- 是否在注释中包含列注释-->
+            <property name="addRemarkComments" value="false"/>
+            <!-- 指定时间格式-->
+            <property name="dateFormat" value="yyyy-MM-dd HH:mm:ss"/>
+            <!--<property name="addRemarkComments" value="true"/>-->
+            <!--<property name="dateFormat" value="yyyy-MM-dd HH:mm:ss"/>-->
+        </commentGenerator>
+
+        <!--jdbc的数据库连接 -->
+        <jdbcConnection driverClass="${jdbc.driver}"
+                        connectionURL="${jdbc.url}"
+                        userId="${jdbc.username}"
+                        password="${jdbc.password}">
+        </jdbcConnection>
+
+        <!-- 类型解析器 -->
+        <!--默认的解析器可能会将数据库类型 decimal 或 numberic 解析为Short、Integer、Long等 Java 类型，
+        如果我们不希望这样解析，就需要使用到这个节点，默认为JavaTypeResolverDefaultImpl-->
+        <javaTypeResolver>
+            <!--是否强制将数据库类型 decimal 或 numberic 解析为 BigDecimal 类型。-->
+            <!--默认为false，会根据数据的小数点位数和长度来决定使用 Short、Integer、Long 或 BigDecimal。-->
+            <property name="forceBigDecimals" value="false"/>
+            <!--是否不强制将数据库类型 date, time 和 timestamp 解析为 Date-->
+            <!--默认为false，如果为true，解析规则将变成：date -> LocalDate，time -> LocalTime，timestamp -> LocalDateTime-->
+            <property name="useJSR310Types" value="false"/>
+        </javaTypeResolver>
+
+        <!-- 实体类 -->
+        <javaModelGenerator targetPackage="com.example.bean"
+                            targetProject="mybatis-generate\src\main\java">
+            <!--实体类需要继承的父类-->
+            <!-- <property name="rootClass" value="cn.zzs.mybatis.entity.EntityClass"/> -->
+            <!--在setter方法中是否对传入字符串进行 trim 操作，默认为 false。-->
+            <property name="trimStrings" value="false"/>
+            <!--是否生成包含全部参数的构造方法。默认为false。当为true时，除了生成指定构造，还会生成对应的 resultMap。-->
+            <property name="constructorBased" value="false"/>
+            <!--是否在targetPackage基础上生成子包。默认为false。当为true时，会将表所在 schema 名作为子包名-->
+            <property name="enableSubPackage" value="false"/>
+        </javaModelGenerator>
+
+        <!-- xml -->
+        <sqlMapGenerator targetPackage="xml"
+                         targetProject="mybatis-generate\src\main\resources">
+        </sqlMapGenerator>
+
+        <!-- Mapper接口 -->
+        <!-- 用于指定使用客户端类生成器的类。-->
+        <!-- 如果自定义的话需要实现org.mybatis.generator.codegen.AbstractJavaClientGenerator并提供无参构造，MBG 为我们提供了以下几种：-->
+        <!-- 1. ANNOTATEDMAPPER：包含 Mapper 接口和 SqlProvider 辅助类，全注解，不包含 XML 文件；-->
+        <!-- 2. XMLMAPPER：包含 Mapper 接口和 XML 文件，不包含注解；-->
+        <!-- 3. MIXEDMAPPER：包含 Mapper 接口和 XML 文件，简单的 CRUD 使用注解，高级条件查询使用 XML 文件。-->
+        <javaClientGenerator type="ANNOTATEDMAPPER"
+                             targetPackage="com.example.mapper"
+                             targetProject="mybatis-generate\src\main\java">
+            <!-- Mapper接口需要实现的父接口-->
+            <!-- <property name="rootInterface" value="cn.zzs.mybatis.entity.BaseMapper"/> -->
+        </javaClientGenerator>
+
+        <!-- 指定数据库表 -->
+        <!-- tableName: 需要用于生成对象的表名。必选属性 允许使用 SQL 通配符，例如：demo_%-->
+        <table tableName="demo_%" schema="mybatis_generate">
+            <!-- 重命名实体类类名-->
+            <domainObjectRenamingRule searchString="^Demo" replaceString=""/>
+            <!-- 忽略某些列-->
+            <ignoreColumnsByRegex pattern="(?i)col.">
+                <except column="col01"/>
+            </ignoreColumnsByRegex>
+        </table>
+
+    </context>
+</generatorConfiguration>
+
+
+        <!--
+            generatorConfiguration（配置）
+            classPathEntry（JDBC驱动路径）
+            properties（properties文件路径）
+            context（生成对象的环境）
+            property（Context作用域参数）
+            jdbcConnection（JDBC连接）
+            connectionFactory（JDBC连接工厂）
+            commentGenerator（注释生成器）
+            javaModelGenerator（实体对象生成器）
+            javaClientGenerator（Mapper 接口或实现类生成器）
+            sqlMapGenerator（xml 生成器）
+            table（用于生成对象的表）
+            javaTypeResolver（Java 类型处理器）
+            plugin（插件）
+        -->

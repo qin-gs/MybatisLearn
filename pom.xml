@@ -20,6 +20,7 @@
         <module>mybatis-learn</module>
         <module>mybatis-plus-learn</module>
         <module>mybatis-spring</module>
+        <module>mybatis-generate</module>
     </modules>
 
     <properties>
@@ -159,6 +160,11 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>3.12.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>1.3.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
