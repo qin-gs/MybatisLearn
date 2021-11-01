@@ -766,7 +766,7 @@ sql语句被解析成`SqlSource`对象(其中定义动态sql节点，文本节�
 
        有多种情况
 
-       1. 结果集只有一列且存在`TypeHandler`，直接转换成对应的`java`类型
+       1. 结果集只有一列且存在`TypeHandler`，直接转换成对应的`java`类型(`resultType`定义的)
        2. `ResultMap`中使用了构造函数，用反射调用构造函数创建对象(涉及嵌套查询和嵌套映射的处理)
        3. 使用默认无参构造函数
        4. 如果`<resultMap>`没有指定构造函数且没有无参构造函数，通过自动映射的方式查找合适的构造函数创建对象
@@ -782,7 +782,11 @@ sql语句被解析成`SqlSource`对象(其中定义动态sql节点，文本节�
 
     4. 通过`applyPropertyMappings`方法映射`ResultMap`中明确指定需要映射的列，到这里该行记录的数据已经完全映射到了结果对象的相应属性中(如果没有映射成功任何属性，根据配置(`returnInstanceForEmptyRow`)决定是返回null还是空对象).
 
-5. 调用`storeObject`方法保存映射得到的结果对象.
+5. 调用`DefaultResultHandler#storeObject`方法保存映射得到的结果对象，然后循环映射结果集中的下一行数据.
+
+    如果时嵌套映射或嵌套查询的结果集，保存到父对象对应的属性；
+
+    如果时普通映射(最外层映射或非嵌套的简单映射)，保存到`ResultHandler`中
 
 过程中使用到的类：
 
@@ -802,14 +806,78 @@ select语句 提供自定义结果处理逻辑,通常在数据集非常庞大的
 
 ![ResultHandler继承关系](./image/ResultHandler继承关系.png)  
 `DefaultResultHandler`: 使用List暂存的结果
+
 `DefaultMapResultHandler`: 使用Map暂存结果
 
-`DefaultResultContext`
-暂存映射后的结果对象，对象个数，是否停止映射三个字段
+`DefaultResultContext`: 暂存映射后的结果对象，对象个数，是否停止映射三个字段
 
 **嵌套映射**
 
-// TODO
+`DefaultResultSetHandler#handleRowValuesForNestedResultMap`解析步骤：
+
+1. 通过`skipRow`定位到指定的记录行
+
+2. 通过`shouldProcessMoreRows`检测能否继续映射结果集中的剩余记录行
+
+3. 通过`resolveDiscriminatedResultMap`决定使用的`ResultMap`对象
+
+4. 通过`createRowKey`为改行记录创建`CacheKey`(作为缓存中的key)
+
+   - 尝试使用<idArg>或<id>节点中定义的列名和该列在当前记录中的值组成`CacheKey`
+
+   - 尝试使用`ResultMap`中明确要映射的列名和在当前记录中的值组成`CacheKey`
+
+     如果存在嵌套映射，会递归处理
+
+   - 如果还找不到相关的列名和列值并且`resultType=Map.class`，使用结果集中的所有列名和列值组成`CacheKey`
+
+   - 如果映射结果不是Map，使用结果集中未映射的列名和在当前记录中的值组成`CacheKey`
+
+5. 根据生成的`CacheKey`查询`DefaultResultSetHandler.nestedResultObjects`集合(嵌套查询映射过程中的所有结果对象都会生成相应的`CacheKey`放进去(处理下一行数据的时候获取到的是同一个))
+
+6. 检测<select>节点中的`resultOrdered`属性(该属性值对嵌套映射有效)
+
+   属性为true时，认为返回一个主结果行，提前释放`nestedResultObject`集合中的数据，编程时要避免引用已清除的主结果对象(嵌套映射的外层对象)
+
+7. 通过`getRowValue`完成当前记录行的映射操作并返回结果对象(加入`nestedResultObjects`中)
+
+   先检测外层对象是否存在
+
+   - 如果不存在外层对象
+
+     - 通过`createResultObject`创建外层对象
+     - 通过`shouldApplyAtomaticMappings`方法检测是否开启自动映射，如果开启了调用`applyAutomaticMappings`方法进行自动映射
+     - 通过`applyPropertyMappings`方法处理`ResultMap`中明确需要映射的列
+
+     以上三个步骤就是通过简单映射创建外层对象并完成非嵌套属性的映射(得到部分映射对象)
+
+     - 将外层对象添加到`DefaultResultSetHandler.acnstorObjects(Map<String(ResultSet的id), Object(外层对象)>)`中
+
+     - 通过`applyNestedResultMappings`方法处理嵌套映射，将生成的结果对象设置到外层对象中
+
+       遍历`ResultMap.propertyResultMappings`集合中记录的`ResultMapping`对象，处理嵌套映射
+
+       - 获取`ResultMapping.nestedResultMapId`字段，该值不为空说明存在相应的嵌套对象需要处理
+       - 确定嵌套映射使用的`ResultMap`对象
+       - 处理循环引用
+         - 如果存在循环引用，不再创建新的嵌套对象，进行重用
+         - 如果不存在循环引用，继续后面的流程
+       - 为嵌套对象创建`CacheKey`，需要与外层的`CacheKey`合并，得到全局唯一的对象
+       - 如果外层对象中用`Collection`记录当前嵌套对象并且没有初始化则进行初始化(比如对象中的`List<User>`)
+       - 检测结果集中相应列是否为空
+       - 完成嵌套映射(`getRowValue`)生成嵌套对象(可能会有递归)
+       - 将上一步中得到的嵌套对象保存到外层对象(`linkObjects`)
+
+     - 将外层对象从`ancestorObjects`集合中移除
+
+     - 将外层对象保存到`mestedResultObjects`中，供后续记录使用
+
+   - 如果存在外层对象(与上面的后半部分相同)
+     - 将外层对象添加到`DefaultResultSetHandler.acnstorObjects(Map<String(ResultSet的id), Object(外层对象)>)`中
+     - 通过`applyNestedResultMappings`方法处理嵌套映射，将生成的结果对象设置到外层对象中
+     - 将外层对象从`ancestorObjects`集合中移除
+
+8. 通过`storeObject`方法将生成的结果对象保存到`ResultHandler`中
 
 **嵌套查询 延迟加载**
 
