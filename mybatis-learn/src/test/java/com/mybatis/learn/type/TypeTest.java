@@ -10,7 +10,7 @@ import java.util.List;
 public class TypeTest {
 
     public static void main(String[] args) {
-        // classTest();
+        classTest();
         parameterizedTypeTest();
     }
 

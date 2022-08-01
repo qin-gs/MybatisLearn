@@ -39,7 +39,7 @@ public class FirstCacheTest {
      * <p>
      * 1. sql + 参数 必须相同
      * 2. statementId 相同
-     * 3. sqlSession相同(一级缓存是会话级别的)x
+     * 3. sqlSession相同(一级缓存是会话级别的)
      * 4. RowBounds相同
      * <p>
      * 5. 没有手动清空 提交 回滚 sqlSession.clearCache();
